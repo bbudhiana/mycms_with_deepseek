@@ -40,7 +40,10 @@ export function WorkflowStepper({ status }: { status: string }) {
                         </div>
                         {!isLast ? (
                             <span
-                                className={cn('mx-1.5 h-px w-5 sm:w-8', i < current ? 'bg-success' : 'bg-border')}
+                                className={cn(
+                                    'mx-1.5 h-px w-5 sm:w-8 transition-colors duration-300',
+                                    i < current ? 'bg-success' : 'bg-border',
+                                )}
                                 aria-hidden
                             />
                         ) : null}

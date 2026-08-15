@@ -21,7 +21,8 @@ createInertiaApp({
 
         return page.default;
     },
-    setup({ el, App, props }) {
+    setup({ el, App, props }: { el: HTMLElement | null; App: React.ComponentType<any>; props: any }) {
+        if (!el) return;
         createRoot(el).render(
             <>
                 <App {...props} />

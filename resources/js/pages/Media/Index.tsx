@@ -136,6 +136,7 @@ export default function MediaIndex({ media, filters, can }: Props) {
                             onKeyDown={(e) => e.key === 'Enter' && applyFilters({ search, type })}
                             placeholder="Cari media..."
                             className="pl-9"
+                            aria-label="Cari media"
                         />
                     </div>
                     <Select
@@ -167,6 +168,8 @@ export default function MediaIndex({ media, filters, can }: Props) {
                         variant={view === 'grid' ? 'secondary' : 'ghost'}
                         size="iconSm"
                         onClick={() => setView('grid')}
+                        aria-label="Tampilan grid"
+                        aria-pressed={view === 'grid'}
                     >
                         <LayoutGrid className="h-4 w-4" />
                     </Button>
@@ -174,6 +177,8 @@ export default function MediaIndex({ media, filters, can }: Props) {
                         variant={view === 'list' ? 'secondary' : 'ghost'}
                         size="iconSm"
                         onClick={() => setView('list')}
+                        aria-label="Tampilan daftar"
+                        aria-pressed={view === 'list'}
                     >
                         <List className="h-4 w-4" />
                     </Button>
@@ -222,22 +227,22 @@ export default function MediaIndex({ media, filters, can }: Props) {
                 </div>
             ) : (
                 <Card className="overflow-hidden">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm" role="grid">
                         <thead>
                             <tr className="border-b border-border">
-                                <th className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                <th scope="col" className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
                                     Media
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                <th scope="col" className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
                                     Tipe
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                <th scope="col" className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
                                     Ukuran
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                <th scope="col" className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
                                     Diunggah
                                 </th>
-                                <th className="hidden px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground sm:table-cell">
+                                <th scope="col" className="hidden px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground sm:table-cell">
                                     Waktu
                                 </th>
                             </tr>
@@ -247,7 +252,15 @@ export default function MediaIndex({ media, filters, can }: Props) {
                                 <tr
                                     key={item.id}
                                     onClick={() => setSelected(item)}
-                                    className="cursor-pointer border-b border-border hover:bg-muted/40"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            setSelected(item);
+                                        }
+                                    }}
+                                    tabIndex={0}
+                                    aria-label={`Lihat detail ${item.original_name}`}
+                                    className="cursor-pointer border-b border-border hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                                 >
                                     <td className="px-4 py-3">
                                         <div className="flex items-center gap-3">

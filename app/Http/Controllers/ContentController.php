@@ -20,23 +20,36 @@ class ContentController extends Controller
         $user = $request->user();
         $isEditor = $user->hasAnyRole(['super_admin', 'admin', 'editor']);
 
+        $sortable = ['updated_at', 'title', 'status', 'published_at'];
+        $sort = $request->input('sort', 'updated_at');
+        if (! in_array($sort, $sortable, true)) {
+            $sort = 'updated_at';
+        }
+        $dir = strtolower($request->input('dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+
         $contents = Content::query()
-            ->with(['author:id,name', 'category:id,name', 'tags:id,name'])
-            ->select(['id', 'title', 'slug', 'status', 'category_id', 'author_id', 'breaking_news_flag', 'editor_pick_flag', 'published_at', 'updated_at'])
+            ->with(['author:id,name', 'category:id,name', 'tags:id,name', 'featuredImage:id,path', 'thumbnail:id,path'])
             ->when(! $isEditor, fn ($q) => $q->where('author_id', $user->id))
             ->when($request->filled('search'), fn ($q) => $q->where('title', 'like', '%'.$request->string('search').'%'))
             ->when($request->filled('status') && $request->input('status') !== 'all', fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('category') && $request->input('category') !== 'all', fn ($q) => $q->where('category_id', $request->string('category')))
-            ->orderByDesc('updated_at')
+            ->orderBy($sort, $dir)
             ->paginate(15)
             ->withQueryString();
 
+        foreach ($contents->items() as $content) {
+            $content->setAttribute('pending_schedule_exists', $content->pendingSchedule()->exists());
+        }
+
         return Inertia::render('Contents/Index', [
             'contents' => $contents,
-            'filters' => $request->only(['search', 'status', 'category']),
+            'filters' => $request->only(['search', 'status', 'category', 'sort', 'dir']),
             'statuses' => collect(ContentStatus::cases())->map(fn ($s) => ['value' => $s->value, 'label' => $s->label()]),
             'categories' => Category::query()->orderBy('name')->get(['id', 'name']),
-            'can' => ['create' => $user->hasPermissionTo('create_content')],
+            'can' => [
+                'create' => $user->hasPermissionTo('create_content'),
+                'delete' => $user->hasPermissionTo('delete_content'),
+            ],
         ]);
     }
 

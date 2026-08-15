@@ -3,7 +3,6 @@ import laravel from 'laravel-vite-plugin';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { wayfinder } from '@laravel/vite-plugin-wayfinder';
-import path from 'node:path';
 
 export default defineConfig({
     plugins: [
@@ -17,7 +16,7 @@ export default defineConfig({
     ],
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, 'resources/js'),
+            '@': new URL('./resources/js', import.meta.url).pathname,
         },
     },
     server: {

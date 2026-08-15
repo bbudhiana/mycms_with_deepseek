@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Upload, Search, Lock } from 'lucide-react';
+import { Upload, Search, Lock, FileImage } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +46,20 @@ export function MediaPicker({ open, onOpenChange, onSelect, canUpload = true, on
     const [altText, setAltText] = React.useState('');
     const fileRef = React.useRef<HTMLInputElement>(null);
     const timer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+    const handleFilesSelected = (files: FileList) => {
+        const fileArray = Array.from(files);
+        const imageFiles = fileArray.filter(f => f.type.startsWith('image/') || f.type === 'application/pdf');
+        if (imageFiles.length === 0) {
+            toast.error('Hanya file gambar dan PDF yang diperbolehkan.');
+            return;
+        }
+        // Process first file for now (could extend for multiple)
+        if (imageFiles[0]) {
+            setAltText('');
+            setPendingFile(imageFiles[0]);
+        }
+    };
 
     const load = React.useCallback(async (search = '') => {
         setLoading(true);
@@ -152,6 +166,13 @@ export function MediaPicker({ open, onOpenChange, onSelect, canUpload = true, on
                     />
                 </div>
 
+                {canUpload && (
+                    <DropZone
+                        onFilesSelected={handleFilesSelected}
+                        uploading={uploading}
+                    />
+                )}
+
                 <UploadAltDialog
                     open={!!pendingFile}
                     onOpenChange={(o) => {
@@ -185,7 +206,7 @@ export function MediaPicker({ open, onOpenChange, onSelect, canUpload = true, on
                                     type="button"
                                     onClick={() => onSelect(item)}
                                     className={cn(
-                                        'group overflow-hidden rounded-md border border-border shadow-sm transition-all hover:ring-2 hover:ring-primary cursor-pointer',
+                                        'group overflow-hidden rounded-md border border-border shadow-sm transition-all duration-200 hover:ring-2 hover:ring-primary cursor-pointer',
                                     )}
                                 >
                                     <div className="aspect-[4/3] bg-muted">
@@ -281,5 +302,79 @@ function UploadAltDialog({
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+    );
+}
+
+function DropZone({
+    onFilesSelected,
+    uploading,
+}: {
+    onFilesSelected: (files: FileList) => void;
+    uploading: boolean;
+}) {
+    const [isDragActive, setIsDragActive] = React.useState(false);
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragActive(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragActive(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragActive(false);
+        if (e.dataTransfer.files.length > 0) {
+            onFilesSelected(e.dataTransfer.files);
+        }
+    };
+
+    return (
+        <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={cn(
+                'mt-4 rounded-lg border-2 border-dashed p-6 text-center transition-all duration-200',
+                isDragActive
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/50',
+            )}
+        >
+            <input
+                type="file"
+                accept="image/*,.pdf"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                        onFilesSelected(e.target.files);
+                    }
+                    e.target.value = '';
+                }}
+                id="dropzone-file-input"
+            />
+            <FileImage className="mx-auto h-10 w-10 text-muted-foreground/50 mb-3" aria-hidden="true" />
+            <p className="text-sm font-medium text-foreground mb-1">
+                {isDragActive ? 'Lepaskan file di sini' : 'Seret & lepas file di sini, atau klik untuk pilih'}
+            </p>
+            <p className="text-xs text-muted-foreground mb-4">
+                Format: JPG, PNG, WebP, GIF, PDF · Maks 10MB
+            </p>
+            <Button
+                variant="outline"
+                disabled={uploading}
+                onClick={() => document.getElementById('dropzone-file-input')?.click()}
+            >
+                <Upload className="h-4 w-4 mr-2" />
+                {uploading ? 'Mengunggah…' : 'Pilih File'}
+            </Button>
+        </div>
     );
 }

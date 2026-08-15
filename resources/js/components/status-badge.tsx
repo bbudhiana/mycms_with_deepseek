@@ -11,11 +11,25 @@ const statusConfig: Record<
     archived: { label: 'Diarsip', tone: 'archived' },
 };
 
-export function StatusBadge({ status, className }: { status: string; className?: string }) {
+export function StatusBadge({
+    status,
+    className,
+    announce = true,
+}: {
+    status: string;
+    className?: string;
+    announce?: boolean;
+}) {
     const config = statusConfig[status] ?? { label: status ?? 'Tidak Dikenal', tone: 'default' as const };
 
     return (
-        <Badge tone={config.tone} className={className}>
+        <Badge
+            tone={config.tone}
+            className={className}
+            role={announce ? 'status' : undefined}
+            aria-atomic={announce ? 'true' : undefined}
+            aria-live={announce ? 'polite' : undefined}
+        >
             {config.label}
         </Badge>
     );

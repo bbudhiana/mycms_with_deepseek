@@ -51,7 +51,7 @@ export function ActivityTimeline({ activities }: { activities: ActivityEntry[] }
     return (
         <ol className="relative space-y-5 border-l border-border pl-5">
             {activities.map((entry) => (
-                <li key={entry.id} className="relative">
+                <li key={entry.id} className="relative transition-opacity duration-200">
                     <span
                         className="absolute -left-[25px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-background bg-primary ring-1 ring-primary/30"
                         aria-hidden

@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import React, { useMemo, useRef, useState } from 'react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import {
     Save,
     Send,
@@ -7,7 +7,8 @@ import {
     X,
     Clock,
     ImagePlus,
-    Sparkles,
+    Link2,
+    Link2Off,
     ArrowLeft,
     UploadCloud,
     CalendarClock,
@@ -33,6 +34,7 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog';
 import { SectionCard } from '@/components/page-header';
+import { Breadcrumbs } from '@/components/ui/breadcrumb';
 
 interface Approval {
     id: number;
@@ -61,6 +63,7 @@ interface CmsContent {
     status: string;
     author_id: number | null;
     published_at?: string | null;
+    updated_at?: string | null;
     featured_image?: { id: number; url: string; original_name?: string } | null;
     thumbnail?: { id: number; url: string; original_name?: string } | null;
     tags: Array<{ id: number; name: string }>;
@@ -86,6 +89,31 @@ export default function ContentsEditor({
     const [scheduleOpen, setScheduleOpen] = useState(false);
     const [rejectOpen, setRejectOpen] = useState(false);
 
+    const initialSnapshot = useMemo(
+        () => ({
+            title: content?.title ?? '',
+            sub_title: content?.sub_title ?? '',
+            slug: content?.slug ?? '',
+            excerpt: content?.excerpt ?? '',
+            body: content?.body ?? '',
+            featured_video: content?.featured_video ?? '',
+            breaking_news_flag: content?.breaking_news_flag ?? false,
+            editor_pick_flag: content?.editor_pick_flag ?? false,
+            category_id: content?.category_id ? String(content.category_id) : '',
+            image_caption: content?.image_caption ?? '',
+            image_credit: content?.image_credit ?? '',
+            tags: content?.tags?.map((t) => t.id) ?? [],
+        }),
+        // Snapshot hanya dihitung sekali per konten.
+        [],
+    );
+
+    const [slugTouched, setSlugTouched] = useState(() => !!content?.slug);
+    const [lastSavedAt, setLastSavedAt] = useState<Date | null>(() =>
+        content?.updated_at ? new Date(content.updated_at) : null,
+    );
+    const snapshotRef = useRef(initialSnapshot);
+
     const form = useForm({
         title: content?.title ?? '',
         sub_title: content?.sub_title ?? '',
@@ -103,9 +131,33 @@ export default function ContentsEditor({
         tags: content?.tags?.map((t) => t.id) ?? [],
     });
 
+    const isDirty = useMemo(() => {
+        const { featured_image_id, thumbnail_id, ...comparable } = form.data as Record<string, unknown>;
+        void featured_image_id;
+        void thumbnail_id;
+        return JSON.stringify(comparable) !== JSON.stringify(snapshotRef.current);
+    }, [form.data]);
+
     const status = content?.status ?? 'draft';
     const editable = isCreate || status === 'draft';
     const meAuthor = !isCreate && content?.author_id === me?.id;
+
+    // Auto-slug dari judul (debounced), nonaktif jika user sudah meng-edit manual.
+    React.useEffect(() => {
+        if (slugTouched || !form.data.title.trim()) return;
+        const t = setTimeout(() => {
+            const slug = form.data.title
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-');
+            if (slug !== form.data.slug) {
+                form.setData('slug', slug);
+            }
+        }, 600);
+        return () => clearTimeout(t);
+    }, [form.data.title]);
 
     const can = useMemo(() => {
         const perms = new Set(me?.permissions ?? []);
@@ -128,16 +180,43 @@ export default function ContentsEditor({
             category_id: data.category_id ? Number(data.category_id) : null,
             tags: data.tags ?? [],
         }));
+        const onSuccess = () => {
+            snapshotRef.current = { ...form.data };
+            setLastSavedAt(new Date());
+        };
         if (isCreate) {
-            form.post('/contents');
+            form.post('/contents', { onSuccess });
         } else {
-            form.patch(`/contents/${content!.id}`);
+            form.patch(`/contents/${content!.id}`, { onSuccess });
         }
     };
 
     const action = (url: string) => {
         router.post(url, {}, { preserveScroll: true });
     };
+
+    const handleAutosave = React.useCallback(
+        async (html: string) => {
+            if (isCreate || !editable || !content) return;
+
+            await router.patch(
+                `/contents/${content.id}`,
+                { body: html },
+                {
+                    preserveState: true,
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        snapshotRef.current = { ...snapshotRef.current, body: html };
+                        setLastSavedAt(new Date());
+                    },
+                    onError: () => {
+                        throw new Error('Autosave failed');
+                    },
+                },
+            );
+        },
+        [isCreate, editable, content?.id, router],
+    );
 
     const toggleTag = (id: number) => {
         const exists = form.data.tags.includes(id);
@@ -160,12 +239,14 @@ export default function ContentsEditor({
                 title={isCreate ? 'Konten Baru' : 'Edit Konten'}
                 description="Tulis dan kelola artikel melalui alur editorial."
                 actions={
-                    <Button asChild variant="ghost" size="sm">
-                        <Link href="/contents">
-                            <ArrowLeft className="h-4 w-4" /> Kembali
-                        </Link>
+                    <Button variant="ghost" size="sm" onClick={() => router.visit('/contents')}>
+                        <ArrowLeft className="h-4 w-4" /> Kembali
                     </Button>
                 }
+            />
+            <Breadcrumbs
+                items={[{ label: 'Konten', href: '/contents' }, { label: isCreate ? 'Konten Baru' : 'Edit Konten' }]}
+                className="mb-6"
             />
 
             <form onSubmit={save}>
@@ -178,9 +259,6 @@ export default function ContentsEditor({
                             <Tabs defaultValue="write">
                                 <TabsList>
                                     <TabsTrigger value="write">Tulis</TabsTrigger>
-                                    <TabsTrigger value="ai" disabled>
-                                        <Sparkles className="mr-1.5 h-3.5 w-3.5" /> AI Assist
-                                    </TabsTrigger>
                                 </TabsList>
 
                                 <TabsContent value="write" className="space-y-4">
@@ -210,14 +288,45 @@ export default function ContentsEditor({
 
                                     <div>
                                         <Label htmlFor="slug">Slug</Label>
-                                        <Input
-                                            id="slug"
-                                            value={form.data.slug}
-                                            onChange={(e) => form.setData('slug', e.target.value)}
-                                            disabled={!editable}
-                                            placeholder="Diisi otomatis dari judul bila kosong"
-                                        />
+                                        <div className="flex gap-2">
+                                            <Input
+                                                id="slug"
+                                                value={form.data.slug}
+                                                onChange={(e) => {
+                                                    setSlugTouched(true);
+                                                    form.setData('slug', e.target.value);
+                                                }}
+                                                disabled={!editable}
+                                                placeholder={slugTouched ? 'Slug artikel' : 'Otomatis dari judul…'}
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                disabled={!editable}
+                                                onClick={() => setSlugTouched((v) => !v)}
+                                                aria-pressed={!slugTouched}
+                                                title={
+                                                    slugTouched ? 'Gunakan otomatis dari judul' : 'Kunci slug manual'
+                                                }
+                                            >
+                                                {slugTouched ? (
+                                                    <Link2Off className="h-4 w-4" />
+                                                ) : (
+                                                    <Link2 className="h-4 w-4" />
+                                                )}
+                                                <span className="hidden sm:inline">
+                                                    {slugTouched ? 'Manual' : 'Otomatis'}
+                                                </span>
+                                            </Button>
+                                        </div>
                                         <FieldError error={form.errors.slug} />
+                                        {!slugTouched ? (
+                                            <p className="mt-1.5 text-xs text-muted-foreground">
+                                                Slug dibuat otomatis dari judul. Klik ikon untuk mengunci &amp; ubah
+                                                manual.
+                                            </p>
+                                        ) : null}
                                     </div>
 
                                     <div>
@@ -227,6 +336,8 @@ export default function ContentsEditor({
                                             onChange={(html) => form.setData('body', html)}
                                             readOnly={!editable}
                                             onRequestImage={() => setPicker('body')}
+                                            onAutosave={handleAutosave}
+                                            autosaveDelay={2000}
                                         />
                                         <FieldError error={form.errors.body} />
                                     </div>
@@ -261,13 +372,6 @@ export default function ContentsEditor({
                                         />
                                     </div>
                                 </TabsContent>
-
-                                <TabsContent value="ai">
-                                    <p className="rounded-md border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-                                        Asisten AI sedang disiapkan. Modul ini belum aktif pada MVP dan memerlukan
-                                        persetujuan manusia sebelum output disimpan.
-                                    </p>
-                                </TabsContent>
                             </Tabs>
                         </SectionCard>
 
@@ -295,7 +399,7 @@ export default function ContentsEditor({
 
                                 <div>
                                     <Label>Tag</Label>
-                                    <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto rounded-md border border-input bg-card p-2">
+                                    <div className="flex max-h-32 flex-wrap gap-2 overflow-y-auto rounded-md border border-input bg-card p-2">
                                         {cms.tags.map((tag) => {
                                             const on = form.data.tags.includes(tag.id);
                                             return (
@@ -305,7 +409,7 @@ export default function ContentsEditor({
                                                     disabled={!editable}
                                                     onClick={() => toggleTag(tag.id)}
                                                     className={
-                                                        'rounded-full border px-2.5 py-1 text-xs transition-colors disabled:opacity-50 cursor-pointer ' +
+                                                        'min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full border px-3 py-1.5 text-xs transition-colors duration-200 disabled:opacity-50 cursor-pointer ' +
                                                         (on
                                                             ? 'border-primary bg-primary text-primary-foreground'
                                                             : 'border-input hover:bg-muted')
@@ -398,24 +502,56 @@ export default function ContentsEditor({
                     </div>
 
                     <aside className="space-y-6">
+                        <SectionCard
+                            title="Status Simpan"
+                            action={
+                                isDirty ? (
+                                    <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning">
+                                        Belum disimpan
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                        <Save className="h-3 w-3" /> Tersimpan
+                                    </span>
+                                )
+                            }
+                        >
+                            {lastSavedAt ? (
+                                <p className="text-sm text-muted-foreground">
+                                    Terakhir disimpan{' '}
+                                    {lastSavedAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">
+                                    {isCreate
+                                        ? 'Konten baru — simpan untuk membuat draft.'
+                                        : 'Klik "Simpan Perubahan" untuk menyimpan.'}
+                                </p>
+                            )}
+                        </SectionCard>
+
+                        <SectionCard title="Pratinjau Hasil Pencarian">
+                            <SeoPreview title={form.data.title} slug={form.data.slug} description={metaDesc} />
+                        </SectionCard>
+
                         {!isCreate ? (
-                            <div className="overflow-hidden rounded-xl border border-border bg-[#171a1f] text-white shadow-sm">
-                                <div className="border-b border-white/10 px-5 py-4">
+                            <div className="overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-sm">
+                                <div className="border-b border-border px-5 py-4">
                                     <h2 className="font-display text-base font-semibold">Alur Editorial</h2>
                                 </div>
                                 <div className="space-y-4 px-5 py-4">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs text-white/50">Status</span>
-                                        <StatusBadge status={status} />
+                                        <span className="text-xs text-muted-foreground">Status</span>
+                                        <StatusBadge status={status} announce={false} />
                                     </div>
                                     <WorkflowStepper status={status} />
                                     {content!.published_at ? (
-                                        <p className="text-xs text-white/50">
+                                        <p className="text-xs text-muted-foreground">
                                             Terbit {formatDate(content!.published_at)}
                                         </p>
                                     ) : null}
                                 </div>
-                                <div className="border-t border-white/10 px-5 py-4 space-y-2">
+                                <div className="border-t border-border px-5 py-4 space-y-2">
                                     <WorkflowActions
                                         can={can}
                                         onPublish={() => action(`/contents/${content!.id}/publish`)}
@@ -471,6 +607,40 @@ export default function ContentsEditor({
             <ReviewNotesDialog open={rejectOpen} onOpenChange={setRejectOpen} mode="reject" contentId={content?.id} />
         </>
     );
+}
+
+function SeoPreview({ title, slug, description }: { title: string; slug: string; description: string }) {
+    const displayTitle = title.trim() ? title.trim() : 'Judul Artikel Anda';
+    const safeSlug = slug.trim() ? slug.trim() : 'slug-artikel';
+    const url = `${window.location.origin}/${safeSlug}`;
+
+    return (
+        <div className="overflow-hidden rounded-lg border border-border bg-background p-3">
+            <div className="flex flex-col gap-1" aria-label="Pratinjau hasil pencarian Google">
+                <p className="truncate text-lg leading-snug text-primary font-medium">{displayTitle}</p>
+                <p className="truncate text-xs text-success">{url.length > 70 ? url.slice(0, 70) + '…' : url}</p>
+                <p className="line-clamp-2 text-sm text-muted-foreground">
+                    {description.trim() ? description : 'Ringkasan artikel akan tampil di sini…'}
+                </p>
+            </div>
+            <div className="mt-2 border-t border-border pt-2">
+                <p className="text-[11px] text-muted-foreground">
+                    {metaTitleOk(title) ? 'Judul SEO baik' : 'Judul ideal 10–60 karakter'} ·{' '}
+                    {metaDescOk(description) ? 'Deskripsi baik' : 'Deskripsi ideal 70–160 karakter'}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+function metaTitleOk(title: string): boolean {
+    const len = title.trim().length;
+    return len > 10 && len <= 60;
+}
+
+function metaDescOk(desc: string): boolean {
+    const len = desc.trim().length;
+    return len >= 70 && len <= 160;
 }
 
 function SeoBar({ ok, count, max, label }: { ok: boolean; count: number; max: number; label: string }) {

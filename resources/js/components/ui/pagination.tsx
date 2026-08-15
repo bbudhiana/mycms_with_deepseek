@@ -68,7 +68,7 @@ function PageLink({
     children: React.ReactNode;
 }) {
     const cls = cn(
-        'inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm font-medium transition-colors',
+        'inline-flex h-10 min-w-10 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors duration-200',
         active ? 'bg-foreground text-background' : 'text-foreground hover:bg-muted',
         disabled && 'pointer-events-none opacity-40',
     );

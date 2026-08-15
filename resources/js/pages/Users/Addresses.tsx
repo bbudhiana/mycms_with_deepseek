@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import { ArrowLeft, Plus, Pencil, Trash2, MapPin, Home as HomeIcon } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -116,11 +116,9 @@ export default function UsersAddresses({ user, can }: Props) {
                             Tambah Alamat
                         </Button>
                     ) : (
-                        <Button asChild variant="ghost" size="sm">
-                            <Link href="/users">
-                                <ArrowLeft className="h-4 w-4" />
-                                Kembali
-                            </Link>
+                        <Button variant="ghost" size="sm" onClick={() => router.visit('/users')}>
+                            <ArrowLeft className="h-4 w-4" />
+                            Kembali
                         </Button>
                     )
                 }
@@ -165,7 +163,7 @@ export default function UsersAddresses({ user, can }: Props) {
                             </div>
                             {can.manage && (
                                 <div className="flex justify-end gap-1 border-t border-border p-3">
-                                    <Button variant="ghost" size="iconSm" onClick={() => openEdit(address)}>
+                                    <Button variant="ghost" size="iconSm" onClick={() => openEdit(address)} aria-label={`Edit alamat ${address.label || address.address_line1}`}>
                                         <Pencil className="h-3.5 w-3.5" />
                                     </Button>
                                     <Button
@@ -180,6 +178,7 @@ export default function UsersAddresses({ user, can }: Props) {
                                                     router.delete(`/users/${user.id}/addresses/${address.id}`),
                                             })
                                         }
+                                        aria-label={`Hapus alamat ${address.label || address.address_line1}`}
                                     >
                                         <Trash2 className="h-3.5 w-3.5" />
                                     </Button>

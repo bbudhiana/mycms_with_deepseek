@@ -1,0 +1,26 @@
+🛠 Action Plan Prioritas
+Fase 1: Critical Fixes (1-2 minggu)
+# 1. Fix badge.tsx - gunakan CSS variables bukan hardcoded hex
+# 2. Add aria-live to status updates
+# 3. Table accessibility (role, scope)
+# 4. Touch target sizes (tag pills, pagination)
+# 5. Add transition durations (150-300ms)
+Fase 2: Design System Polish (2-3 minggu)
+# 1. Define type scale tokens in app.css
+# 2. Choose editorial visual direction (Magazine vs Data-Dense)
+# 3. Implement asymmetric grid on Dashboard
+# 4. Sticky RTE toolbar
+# 5. Sidebar active state visual indicator
+Fase 3: Enhanced UX (3-4 minggu)
+# 1. Bulk actions on content list (x tidak cocok)
+# 2. Breadcrumbs component
+# 3. Autosave + word count in editor
+# 4. Drag-drop media upload
+# 5. Keyboard navigation sidebar
+# 6. Page transitions (Inertia v3)
+Fase 4: Polish & Accessibility Audit (1-2 minggu)
+# 1. Full axe-core / WAVE audit
+# 2. Dark mode testing (all components)
+# 3. Reduced motion testing
+# 4. Mobile/tablet usability testing
+# 5. Performance audit (CLS, LCP)

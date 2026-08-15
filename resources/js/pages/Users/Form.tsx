@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import { ArrowLeft, Save } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -76,11 +76,9 @@ export default function UsersForm({ user, roles }: Props) {
                 title={isEdit ? `Edit ${user?.name}` : 'Tambah Pengguna'}
                 description={isEdit ? 'Perbarui informasi akun pengguna.' : 'Buat akun pengguna baru.'}
                 actions={
-                    <Button asChild variant="ghost" size="sm">
-                        <Link href="/users">
-                            <ArrowLeft className="h-4 w-4" />
-                            Kembali
-                        </Link>
+                    <Button variant="ghost" size="sm" onClick={() => router.visit('/users')}>
+                        <ArrowLeft className="h-4 w-4" />
+                        Kembali
                     </Button>
                 }
             />
@@ -215,8 +213,8 @@ export default function UsersForm({ user, roles }: Props) {
                 </Card>
 
                 <div className="flex justify-end gap-2">
-                    <Button asChild type="button" variant="ghost">
-                        <Link href="/users">Batal</Link>
+                    <Button type="button" variant="ghost" onClick={() => router.visit('/users')}>
+                        Batal
                     </Button>
                     <Button type="submit" disabled={form.processing}>
                         <Save className="h-4 w-4" />

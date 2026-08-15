@@ -93,6 +93,7 @@ export default function CategoriesIndex({ categories, filters, editing, parentOp
                         onKeyDown={(e) => e.key === 'Enter' && applySearch()}
                         placeholder="Cari kategori..."
                         className="pl-9"
+                        aria-label="Cari kategori"
                     />
                 </div>
                 {filters.search && (
@@ -120,26 +121,26 @@ export default function CategoriesIndex({ categories, filters, editing, parentOp
                 />
             ) : (
                 <Card className="overflow-hidden">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm" role="grid">
                         <thead>
                             <tr className="border-b border-border">
-                                <th className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                <th scope="col" className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
                                     Nama
                                 </th>
-                                <th className="hidden px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground md:table-cell">
+                                <th scope="col" className="hidden px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground md:table-cell">
                                     Slug
                                 </th>
-                                <th className="hidden px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground sm:table-cell">
+                                <th scope="col" className="hidden px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground sm:table-cell">
                                     Parent
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                <th scope="col" className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
                                     Sub-kategori
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                <th scope="col" className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
                                     Konten
                                 </th>
                                 {can.manage && (
-                                    <th className="px-4 py-3 text-right text-xs uppercase tracking-wide text-muted-foreground">
+                                    <th scope="col" className="px-4 py-3 text-right text-xs uppercase tracking-wide text-muted-foreground">
                                         Aksi
                                     </th>
                                 )}
@@ -186,6 +187,7 @@ export default function CategoriesIndex({ categories, filters, editing, parentOp
                                                         variant="ghost"
                                                         size="iconSm"
                                                         onClick={() => setEditingId(category.id)}
+                                                        aria-label={`Edit kategori ${category.name}`}
                                                     >
                                                         <Pencil className="h-3.5 w-3.5" />
                                                     </Button>
@@ -201,6 +203,7 @@ export default function CategoriesIndex({ categories, filters, editing, parentOp
                                                                     router.delete(`/categories/${category.id}`),
                                                             })
                                                         }
+                                                        aria-label={`Hapus kategori ${category.name}`}
                                                     >
                                                         <Trash2 className="h-3.5 w-3.5" />
                                                     </Button>

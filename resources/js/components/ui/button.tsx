@@ -6,7 +6,7 @@ type Variant = 'default' | 'primary' | 'secondary' | 'ghost' | 'destructive' | '
 type Size = 'default' | 'sm' | 'lg' | 'icon' | 'iconSm';
 
 const base =
-    'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0 cursor-pointer select-none';
+    'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0 cursor-pointer select-none';
 
 const variants: Record<Variant, string> = {
     default: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm',

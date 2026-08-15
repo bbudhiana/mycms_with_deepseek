@@ -22,6 +22,10 @@ class DashboardController extends Controller
                 ->whereDate('published_at', today())
                 ->tap($ownedOnly)
                 ->count(),
+            'published_yesterday' => Content::query()
+                ->whereDate('published_at', today()->subDay())
+                ->tap($ownedOnly)
+                ->count(),
             'pending_review' => Content::query()
                 ->where('status', ContentStatus::Review)
                 ->tap($ownedOnly)
@@ -35,7 +39,28 @@ class DashboardController extends Controller
                 ->where('updated_at', '>=', now()->subWeek())
                 ->tap($ownedOnly)
                 ->count(),
+            'drafts_updated_prior_week' => Content::query()
+                ->where('status', ContentStatus::Draft)
+                ->whereBetween('updated_at', [now()->subWeeks(2), now()->subWeek()])
+                ->tap($ownedOnly)
+                ->count(),
         ];
+
+        $funnel = [
+            'draft' => Content::query()->where('status', ContentStatus::Draft)->tap($ownedOnly)->count(),
+            'review' => Content::query()->where('status', ContentStatus::Review)->tap($ownedOnly)->count(),
+            'approved' => Content::query()->where('status', ContentStatus::Approved)->tap($ownedOnly)->count(),
+            'published' => Content::query()->where('status', ContentStatus::Published)->tap($ownedOnly)->count(),
+            'archived' => Content::query()->where('status', ContentStatus::Archived)->tap($ownedOnly)->count(),
+        ];
+
+        $upcoming = ScheduledPublish::query()
+            ->where('status', 'pending')
+            ->where('scheduled_at', '>=', now())
+            ->with('content:id,title,status')
+            ->orderBy('scheduled_at')
+            ->limit(5)
+            ->get(['id', 'content_id', 'scheduled_at', 'status']);
 
         $recentContents = Content::query()
             ->with('author:id,name')
@@ -51,6 +76,9 @@ class DashboardController extends Controller
 
         return Inertia::render('Dashboard', [
             'metrics' => $metrics,
+            'funnel' => $funnel,
+            'upcoming' => $upcoming,
+            'isEditor' => $isEditor,
             'recentContents' => $recentContents,
             'recentActivity' => $recentActivity,
             'can' => [

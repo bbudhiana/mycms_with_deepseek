@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { Plus, Search, RefreshCw, Pencil, Trash2, Power, Mail } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -93,11 +93,9 @@ export default function UsersIndex({ users, filters, roles, can }: Props) {
                 description="Kelola akun, peran, dan status pengguna di sistem."
                 actions={
                     can.manage ? (
-                        <Button asChild>
-                            <Link href="/users/create">
-                                <Plus className="h-4 w-4" />
-                                Tambah User
-                            </Link>
+                        <Button onClick={() => router.visit('/users/create')}>
+                            <Plus className="h-4 w-4" />
+                            Tambah User
                         </Button>
                     ) : undefined
                 }
@@ -112,6 +110,7 @@ export default function UsersIndex({ users, filters, roles, can }: Props) {
                         onKeyDown={(e) => e.key === 'Enter' && applyFilters({ search, role, status })}
                         placeholder="Cari nama atau email..."
                         className="pl-9"
+                        aria-label="Cari nama atau email"
                     />
                 </div>
                 <Select
@@ -167,23 +166,23 @@ export default function UsersIndex({ users, filters, roles, can }: Props) {
                 />
             ) : (
                 <Card className="overflow-hidden">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm" role="grid">
                         <thead>
                             <tr className="border-b border-border">
-                                <th className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                <th scope="col" className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
                                     Nama
                                 </th>
-                                <th className="hidden px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground md:table-cell">
+                                <th scope="col" className="hidden px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground md:table-cell">
                                     Email
                                 </th>
-                                <th className="hidden px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground sm:table-cell">
+                                <th scope="col" className="hidden px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground sm:table-cell">
                                     Peran
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                <th scope="col" className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
                                     Status
                                 </th>
                                 {(can.manage || can.changeRole) && (
-                                    <th className="px-4 py-3 text-right text-xs uppercase tracking-wide text-muted-foreground">
+                                    <th scope="col" className="px-4 py-3 text-right text-xs uppercase tracking-wide text-muted-foreground">
                                         Aksi
                                     </th>
                                 )}
@@ -242,10 +241,8 @@ export default function UsersIndex({ users, filters, roles, can }: Props) {
                                         {(can.manage || can.changeRole) && (
                                             <td className="px-4 py-3">
                                                 <div className="flex justify-end gap-1">
-                                                    <Button asChild variant="ghost" size="iconSm">
-                                                        <Link href={`/users/${user.id}`}>
-                                                            <Pencil className="h-3.5 w-3.5" />
-                                                        </Link>
+                                                    <Button variant="ghost" size="iconSm" onClick={() => router.visit(`/users/${user.id}`)} aria-label={`Edit ${user.name}`}>
+                                                        <Pencil className="h-3.5 w-3.5" />
                                                     </Button>
                                                     <Button
                                                         variant="ghost"
@@ -253,6 +250,7 @@ export default function UsersIndex({ users, filters, roles, can }: Props) {
                                                         onClick={() => toggleActive(user)}
                                                         disabled={toggleForm.processing}
                                                         title={user.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                                                        aria-label={user.is_active ? `Nonaktifkan ${user.name}` : `Aktifkan ${user.name}`}
                                                     >
                                                         <Power
                                                             className={cn(
@@ -273,6 +271,7 @@ export default function UsersIndex({ users, filters, roles, can }: Props) {
                                                                     onConfirm: () => router.delete(`/users/${user.id}`),
                                                                 })
                                                             }
+                                                            aria-label={`Hapus ${user.name}`}
                                                         >
                                                             <Trash2 className="h-3.5 w-3.5" />
                                                         </Button>

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -26,10 +27,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property ContentStatus $status
  * @property int|null $author_id
  * @property int|null $reviewer_id
+ * @property Carbon|null $published_at
+ * @property Carbon|null $reviewed_at
+ * @property Carbon|null $updated_at
+ * @property bool $pending_schedule_exists
+ * @property int $waiting_hours
  */
 class Content extends Model
 {
     use HasFactory;
+
+    protected $appends = ['published_today', 'has_pending_schedule'];
 
     protected $fillable = [
         'title',
@@ -106,6 +114,20 @@ class Content extends Model
     public function pendingSchedule(): HasMany
     {
         return $this->scheduledPublishes()->where('status', 'pending');
+    }
+
+    public function getPublishedTodayAttribute(): bool
+    {
+        return $this->published_at?->isToday() ?? false;
+    }
+
+    public function getHasPendingScheduleAttribute(): bool
+    {
+        if ($this->getAttribute('pending_schedule_exists') === null) {
+            return $this->pendingSchedule()->exists();
+        }
+
+        return $this->getAttribute('pending_schedule_exists');
     }
 
     public function statusLabel(): Attribute

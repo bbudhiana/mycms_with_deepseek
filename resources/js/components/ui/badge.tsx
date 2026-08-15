@@ -2,11 +2,11 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 const toneClasses: Record<string, string> = {
-    draft: 'bg-[#e2e8f0] text-[#475569]',
-    review: 'bg-[#fef3c7] text-[#92400e]',
-    approved: 'bg-[#dbeafe] text-[#1e40af]',
-    published: 'bg-[#dcfce7] text-[#166534]',
-    archived: 'bg-[#e2e8f0] text-[#475569]',
+    draft: 'bg-draft/10 text-draft',
+    review: 'bg-review/10 text-review',
+    approved: 'bg-approved/10 text-approved',
+    published: 'bg-published/10 text-published',
+    archived: 'bg-archived/10 text-archived',
     default: 'bg-muted text-muted-foreground',
     destructive: 'bg-destructive/10 text-destructive',
     success: 'bg-success/10 text-success',
@@ -21,7 +21,7 @@ export function Badge({ className, tone = 'default', ...props }: BadgeProps) {
     return (
         <span
             className={cn(
-                'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors',
+                'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors duration-200',
                 toneClasses[tone],
                 tone !== 'default' && className?.includes('border') ? '' : 'border-transparent',
                 className,

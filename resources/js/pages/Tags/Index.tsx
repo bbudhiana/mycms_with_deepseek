@@ -76,6 +76,7 @@ export default function TagsIndex({ tags, filters, can }: Props) {
                         }
                         placeholder="Cari tag..."
                         className="pl-9"
+                        aria-label="Cari tag"
                     />
                 </div>
                 {filters.search && (
@@ -101,20 +102,20 @@ export default function TagsIndex({ tags, filters, can }: Props) {
                 />
             ) : (
                 <Card className="overflow-hidden">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm" role="grid">
                         <thead>
                             <tr className="border-b border-border">
-                                <th className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                <th scope="col" className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
                                     Nama
                                 </th>
-                                <th className="hidden px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground md:table-cell">
+                                <th scope="col" className="hidden px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground md:table-cell">
                                     Slug
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                <th scope="col" className="px-4 py-3 text-left text-xs uppercase tracking-wide text-muted-foreground">
                                     Konten
                                 </th>
                                 {can.manage && (
-                                    <th className="px-4 py-3 text-right text-xs uppercase tracking-wide text-muted-foreground">
+                                    <th scope="col" className="px-4 py-3 text-right text-xs uppercase tracking-wide text-muted-foreground">
                                         Aksi
                                     </th>
                                 )}
@@ -146,6 +147,7 @@ export default function TagsIndex({ tags, filters, can }: Props) {
                                                         variant="ghost"
                                                         size="iconSm"
                                                         onClick={() => setEditingId(tag.id)}
+                                                        aria-label={`Edit tag ${tag.name}`}
                                                     >
                                                         <Pencil className="h-3.5 w-3.5" />
                                                     </Button>
@@ -160,6 +162,7 @@ export default function TagsIndex({ tags, filters, can }: Props) {
                                                                 onConfirm: () => router.delete(`/tags/${tag.id}`),
                                                             })
                                                         }
+                                                        aria-label={`Hapus tag ${tag.name}`}
                                                     >
                                                         <Trash2 className="h-3.5 w-3.5" />
                                                     </Button>
