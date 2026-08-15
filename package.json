@@ -1,0 +1,56 @@
+{
+    "$schema": "https://www.schemastore.org/package.json",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "vite build",
+        "dev": "vite",
+        "types:check": "tsc --noEmit",
+        "lint:check": "eslint .",
+        "format:check": "prettier --check ."
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.39.5",
+        "@inertiajs/react": "^3.0.0",
+        "@inertiajs/vite": "^3.0.0",
+        "@laravel/vite-plugin-wayfinder": "^0.1.0",
+        "@radix-ui/react-avatar": "^1.1.6",
+        "@radix-ui/react-checkbox": "^1.1.8",
+        "@radix-ui/react-dialog": "^1.1.11",
+        "@radix-ui/react-dropdown-menu": "^2.1.11",
+        "@radix-ui/react-label": "^2.1.4",
+        "@radix-ui/react-popover": "^1.1.11",
+        "@radix-ui/react-progress": "^1.1.7",
+        "@radix-ui/react-select": "^2.1.9",
+        "@radix-ui/react-separator": "^1.1.5",
+        "@radix-ui/react-switch": "^1.1.7",
+        "@radix-ui/react-tabs": "^1.1.8",
+        "@radix-ui/react-toast": "^1.2.11",
+        "@radix-ui/react-tooltip": "^1.1.11",
+        "@tailwindcss/vite": "^4.0.0",
+        "@types/node": "^22.0.0",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "@vitejs/plugin-react": "^6.0.0",
+        "eslint": "^9.0.0",
+        "eslint-plugin-react-hooks": "^7.1.1",
+        "eslint-plugin-react-refresh": "^0.5.4",
+        "laravel-vite-plugin": "^3.1.0",
+        "lucide-react": "^0.469.0",
+        "prettier": "^3.3.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "sonner": "^2.0.0",
+        "tailwindcss": "^4.0.0",
+        "typescript": "^5.7.0",
+        "typescript-eslint": "^8.67.0",
+        "vite": "^8.0.0"
+    },
+    "optionalDependencies": {
+        "@laravel/multiplex": "^0.4.1"
+    },
+    "dependencies": {
+        "clsx": "^2.1.1",
+        "tailwind-merge": "^3.6.0"
+    }
+}

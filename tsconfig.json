@@ -1,0 +1,25 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "lib": ["ESNext", "DOM", "DOM.Iterable"],
+        "jsx": "react-jsx",
+        "strict": true,
+        "noEmit": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["resources/js/*"],
+            "@inertiajs/react": ["node_modules/@inertiajs/react"]
+        },
+        "types": ["vite/client"]
+    },
+    "include": ["resources/js/**/*.ts", "resources/js/**/*.tsx"],
+    "exclude": ["node_modules", "public", "vendor"]
+}

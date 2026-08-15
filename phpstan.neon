@@ -1,0 +1,29 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app
+
+    level: 5
+
+    tmpDir: storage/framework/cache/phpstan
+
+    ignoreErrors:
+        - '#undefined property Illuminate\\Database\\Eloquent\\Model::#'
+        - '#Illuminate\\Database\\Eloquent\\Model given#'
+        - '#Cannot call method toISOString\(\) on string#'
+        - '#Instanceof between .*User and .*MustVerifyEmail#'
+        - '#\.\.\. but returns Illuminate\\Database\\Eloquent\\Model#'
+        - '#requires using class to implement .*PasskeyUser#'
+        - '#not covariant with PHPDoc type .* of overridden property#'
+        - '#CmsDataService::collectDescendants#'
+        - '#CategoryRequest::collectChildren#'
+        - '#Anonymous function has an unused use #'
+        - '#Property .* is never read, only written#'
+        - '#PHPDoc tag @param references unknown parameter#'
+        - '#Negated boolean expression is always false#'
+        - '#Strict comparison using === between false and #'
+
+    reportUnmatchedIgnoredErrors: false
+    treatPhpDocTypesAsCertain: true
