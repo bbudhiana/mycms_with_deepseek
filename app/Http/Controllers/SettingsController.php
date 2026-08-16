@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\ActivityLogService;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class SettingsController extends Controller
@@ -16,7 +18,7 @@ class SettingsController extends Controller
     public function profile(Request $request)
     {
         return Inertia::render('Settings/Profile', [
-            'user' => $request->user()->load('addresses'),
+            'user' => $request->user()->load('addresses', 'roles:id,name'),
         ]);
     }
 
@@ -33,11 +35,33 @@ class SettingsController extends Controller
         return Inertia::render('Settings/Appearance');
     }
 
-    public function addresses(Request $request)
+    public function updateProfile(Request $request)
     {
-        return Inertia::render('Settings/Addresses', [
-            'user' => $request->user()->load('addresses'),
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'job_title' => ['nullable', 'string', 'max:255'],
+            'bio' => ['nullable', 'string', 'max:65535'],
         ]);
+
+        $emailChanged = $validated['email'] !== $user->email;
+
+        $user->forceFill($validated);
+
+        if ($emailChanged && $user instanceof MustVerifyEmail) {
+            $user->email_verified_at = null;
+            $user->save();
+
+            $user->sendEmailVerificationNotification();
+        } else {
+            $user->save();
+        }
+
+        $this->activityLog->log('profile.updated', $user, "Memperbarui profil '{$user->name}'.");
+
+        return Redirect::back()->with('success', 'Profil berhasil diperbarui.');
     }
 
     public function updateProfilePhoto(Request $request)

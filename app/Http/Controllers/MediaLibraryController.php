@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\MediaRequest;
+use App\Models\Content;
 use App\Models\Media;
 use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -21,20 +23,51 @@ class MediaLibraryController extends Controller
 
         $media = Media::query()
             ->with('uploader:id,name')
+            ->withCount(['usedByFeaturedContents as featured_usage_count', 'usedByThumbnailContents as thumbnail_usage_count'])
             ->when($request->filled('search'), fn ($q) => $q->where('original_name', 'like', '%'.$request->string('search').'%'))
             ->when($request->filled('type') && $request->input('type') !== 'all', function ($q) use ($request) {
                 $type = $request->string('type')->toString();
                 $q->where('mime_type', 'like', $type === 'image' ? 'image/%' : ($type === 'doc' ? 'application/%' : 'image/svg+xml'));
             })
             ->when(! $manageAll, fn ($q) => $q->where('uploaded_by', $user->id))
-            ->when($request->boolean('mine') === false && $manageAll && $request->filled('uploaded_by'), fn ($q) => $q->where('uploaded_by', $request->integer('uploaded_by')))
-            ->orderByDesc('created_at')
+            ->when($request->boolean('mine') && $manageAll, fn ($q) => $q->where('uploaded_by', $user->id))
+            ->when($request->input('alt') === 'missing', fn ($q) => $q->whereNull('alt_text'))
+            ->when($request->filled('used'), function ($q) use ($request) {
+                if ($request->boolean('used')) {
+                    $q->where(fn ($sub) => $sub->whereHas('usedByFeaturedContents')->orWhereHas('usedByThumbnailContents'));
+                } else {
+                    $q->whereDoesntHave('usedByFeaturedContents')->whereDoesntHave('usedByThumbnailContents');
+                }
+            })
+            ->when($request->filled('sort') && $request->input('sort') !== 'recent', function ($q) use ($request) {
+                match ($request->string('sort')->toString()) {
+                    'largest' => $q->orderByDesc('size'),
+                    'name' => $q->orderBy('original_name'),
+                    default => $q->orderByDesc('created_at'),
+                };
+            }, fn ($q) => $q->orderByDesc('created_at'))
             ->paginate(24)
             ->withQueryString();
 
+        // Backfill dimensions and thumbnails once for legacy items on the current page.
+        $media->getCollection()->each(function (Media $item) {
+            $item->fillDimensions();
+            $item->ensureThumbnail();
+        });
+
+        $this->attachUsage($media);
+
         return Inertia::render('Media/Index', [
             'media' => $media,
-            'filters' => $request->only(['search', 'type']),
+            'filters' => [
+                'search' => $request->input('search'),
+                'type' => $request->input('type'),
+                'sort' => $request->input('sort'),
+                'mine' => $request->boolean('mine'),
+                'alt' => $request->input('alt'),
+                'used' => $request->filled('used') ? $request->boolean('used') : null,
+            ],
+            'stats' => $this->stats($manageAll, $user->id),
             'can' => [
                 'upload' => $user->hasPermissionTo('upload_media'),
                 'manage' => $manageAll,
@@ -60,6 +93,9 @@ class MediaLibraryController extends Controller
             'alt_text' => $request->input('alt_text'),
             'uploaded_by' => $request->user()->id,
         ]);
+
+        $media->fillDimensions();
+        $media->ensureThumbnail();
 
         $this->activityLog->log('media.uploaded', $media, "Mengunggah media '{$media->original_name}'.");
 
@@ -94,5 +130,54 @@ class MediaLibraryController extends Controller
         $this->activityLog->log('media.deleted', null, "Menghapus media '{$name}'.");
 
         return Redirect::back()->with('success', 'Media dihapus.');
+    }
+
+    private function attachUsage(LengthAwarePaginator $media): void
+    {
+        $ids = $media->getCollection()->pluck('id');
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        $contents = Content::query()
+            ->where(fn ($q) => $q->whereIn('featured_image_id', $ids)->orWhereIn('thumbnail_id', $ids))
+            ->select(['id', 'title', 'featured_image_id', 'thumbnail_id'])
+            ->orderByDesc('updated_at')
+            ->get();
+
+        $usageMap = [];
+
+        foreach ($contents as $content) {
+            foreach (['featured_image_id', 'thumbnail_id'] as $column) {
+                $mediaId = $content->{$column};
+
+                if ($mediaId !== null && $ids->contains($mediaId)) {
+                    $usageMap[$mediaId][] = ['id' => $content->id, 'title' => $content->title];
+                }
+            }
+        }
+
+        $media->getCollection()->each(function (Media $item) use ($usageMap) {
+            $item->setAttribute('used_in_contents', $usageMap[$item->id] ?? []);
+        });
+    }
+
+    /**
+     * @return array{total: int, storage: int, missing_alt: int, unused: int}
+     */
+    private function stats(bool $manageAll, int $userId): array
+    {
+        $query = Media::query()->when(! $manageAll, fn ($q) => $q->where('uploaded_by', $userId));
+
+        return [
+            'total' => (clone $query)->count(),
+            'storage' => (clone $query)->sum('size'),
+            'missing_alt' => (clone $query)->whereNull('alt_text')->count(),
+            'unused' => (clone $query)
+                ->whereDoesntHave('usedByFeaturedContents')
+                ->whereDoesntHave('usedByThumbnailContents')
+                ->count(),
+        ];
     }
 }

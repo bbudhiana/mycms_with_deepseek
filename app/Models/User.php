@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Passkeys\PasskeyAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
@@ -21,6 +22,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $job_title
  * @property string|null $bio
  * @property bool $is_active
+ * @property Carbon|null $last_login_at
  */
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -40,6 +42,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'job_title',
         'bio',
         'is_active',
+        'last_login_at',
     ];
 
     /**
@@ -68,6 +71,8 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'is_active' => 'boolean',
+            'last_login_at' => 'datetime',
+            'contents_max_updated_at' => 'datetime',
         ];
     }
 

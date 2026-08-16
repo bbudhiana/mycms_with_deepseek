@@ -69,12 +69,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/users/{user}/addresses/{address}', [UserAddressController::class, 'update'])->name('users.addresses.update');
     Route::delete('/users/{user}/addresses/{address}', [UserAddressController::class, 'destroy'])->name('users.addresses.destroy');
 
-    Route::get('/roles', RoleManagementController::class)->name('roles.index');
+    Route::get('/roles', [RoleManagementController::class, 'index'])->name('roles.index');
+    Route::post('/roles', [RoleManagementController::class, 'store'])->name('roles.store');
+    Route::patch('/roles/{role}', [RoleManagementController::class, 'update'])->name('roles.update');
+    Route::delete('/roles/{role}', [RoleManagementController::class, 'destroy'])->name('roles.destroy');
 
     Route::get('/settings/profile', [SettingsController::class, 'profile'])->name('settings.profile');
+    Route::patch('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile.update');
     Route::get('/settings/security', [SettingsController::class, 'security'])->name('settings.security');
     Route::get('/settings/appearance', [SettingsController::class, 'appearance'])->name('settings.appearance');
-    Route::get('/settings/addresses', [SettingsController::class, 'addresses'])->name('settings.addresses');
     Route::post('/settings/profile-photo', [SettingsController::class, 'updateProfilePhoto'])->name('settings.profile-photo');
     Route::delete('/settings/profile-photo', [SettingsController::class, 'destroyProfilePhoto'])->name('settings.profile-photo.destroy');
 

@@ -41,13 +41,14 @@ interface PaginatorData {
 
 interface Props {
     contents: PaginatorData;
-    filters: { search?: string; status?: string; category?: string; sort?: string; dir?: string };
+    filters: { search?: string; status?: string; category?: string; tag?: string; sort?: string; dir?: string };
     statuses: Array<{ value: string; label: string }>;
     categories: Array<{ id: number; name: string }>;
+    tags: Array<{ id: number; name: string }>;
     can: { create: boolean; delete: boolean };
 }
 
-export default function ContentsIndex({ contents, filters, statuses, categories, can }: Props) {
+export default function ContentsIndex({ contents, filters, statuses, categories, tags, can }: Props) {
     const [search, setSearch] = useState(filters.search ?? '');
     const [debouncedSearch, setDebouncedSearch] = useState(filters.search ?? '');
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -187,6 +188,29 @@ export default function ContentsIndex({ contents, filters, statuses, categories,
                         {categories.map((c) => (
                             <SelectItem key={c.id} value={String(c.id)}>
                                 {c.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+
+                <Select
+                    value={filters.tag ?? 'all'}
+                    onValueChange={(v) =>
+                        router.get(
+                            '/contents',
+                            { ...filters, tag: v === 'all' ? undefined : v },
+                            { preserveState: true, replace: true },
+                        )
+                    }
+                >
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Tag" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Semua Tag</SelectItem>
+                        {tags.map((t) => (
+                            <SelectItem key={t.id} value={String(t.id)}>
+                                {t.name}
                             </SelectItem>
                         ))}
                     </SelectContent>

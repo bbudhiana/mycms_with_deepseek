@@ -6,6 +6,7 @@ use App\Enums\ContentStatus;
 use App\Http\Requests\ContentRequest;
 use App\Models\Category;
 use App\Models\Content;
+use App\Models\Tag;
 use App\Services\ActivityLogService;
 use App\Services\CmsDataService;
 use Illuminate\Http\Request;
@@ -33,6 +34,7 @@ class ContentController extends Controller
             ->when($request->filled('search'), fn ($q) => $q->where('title', 'like', '%'.$request->string('search').'%'))
             ->when($request->filled('status') && $request->input('status') !== 'all', fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('category') && $request->input('category') !== 'all', fn ($q) => $q->where('category_id', $request->string('category')))
+            ->when($request->filled('tag') && $request->input('tag') !== 'all', fn ($q) => $q->whereHas('tags', fn ($tq) => $tq->where('tags.id', $request->string('tag'))))
             ->orderBy($sort, $dir)
             ->paginate(15)
             ->withQueryString();
@@ -43,9 +45,10 @@ class ContentController extends Controller
 
         return Inertia::render('Contents/Index', [
             'contents' => $contents,
-            'filters' => $request->only(['search', 'status', 'category', 'sort', 'dir']),
+            'filters' => $request->only(['search', 'status', 'category', 'tag', 'sort', 'dir']),
             'statuses' => collect(ContentStatus::cases())->map(fn ($s) => ['value' => $s->value, 'label' => $s->label()]),
             'categories' => Category::query()->orderBy('name')->get(['id', 'name']),
+            'tags' => Tag::query()->orderBy('name')->get(['id', 'name']),
             'can' => [
                 'create' => $user->hasPermissionTo('create_content'),
                 'delete' => $user->hasPermissionTo('delete_content'),

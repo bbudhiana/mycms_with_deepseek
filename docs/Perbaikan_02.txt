@@ -1,0 +1,26 @@
+1. di bagian dashboard, lakukan evaluasi UI/UX dan berikan rekomendasi-rekomendasi yang bagus untuk meningkatkan dashboard yang informatif untuk CMS Berita Online, gunakan skill frontend-design dan ui-ux-pro-max untuk mendukung evaluasi UI/UX
+
+2. di bagian konten, lakukan evaluasi UI/UX dan berikan rekomendasi-rekomendasi yang bagus untuk meningkatkan konten yang informatif untuk CMS Berita Online, gunakan skill frontend-design dan ui-ux-pro-max untuk mendukung evaluasi UI/UX
+
+3. di bagian review, lakukan evaluasi UI/UX dan berikan rekomendasi-rekomendasi yang bagus untuk meningkatkan review yang informatif untuk CMS Berita Online, gunakan skill frontend-design dan ui-ux-pro-max untuk mendukung evaluasi UI/UX
+
+4. di bagian media, lakukan evaluasi UI/UX dan berikan rekomendasi-rekomendasi yang bagus untuk meningkatkan media yang informatif untuk CMS Berita Online, gunakan skill frontend-design dan ui-ux-pro-max untuk mendukung evaluasi UI/UX
+
+result : php artisan media:regenerate-thumbnails
+
+5. di bagian kategori, lakukan evaluasi UI/UX dan berikan rekomendasi-rekomendasi yang bagus untuk meningkatkan kategori yang informatif untuk CMS Berita Online, gunakan skill frontend-design dan ui-ux-pro-max untuk mendukung evaluasi UI/UX
+
+6. di bagian tag, lakukan evaluasi UI/UX dan berikan rekomendasi-rekomendasi yang bagus untuk meningkatkan tag yang informatif untuk CMS Berita Online, gunakan skill frontend-design dan ui-ux-pro-max untuk mendukung evaluasi UI/UX
+
+7. di bagian users, lakukan evaluasi UI/UX dan berikan rekomendasi-rekomendasi yang bagus untuk meningkatkan users yang informatif untuk CMS Berita Online, gunakan skill frontend-design dan ui-ux-pro-max untuk mendukung evaluasi UI/UX
+
+📌 Catatan pengembangan berikutnya — fitur "Terakhir Login":
+Belum ada tracking login sama sekali (tidak ada kolom last_login_at, dan Fortify tidak mencatatnya secara default). Saat dikerjakan nanti: tambah migration last_login_at (nullable datetime), update di event login (mis. listener Login dari Fortify/Sanctum), lalu tampilkan di kolom "Terakhir login" pada daftar Pengguna — ini akan lebih informatif daripada "terakhir berkontribusi" untuk memantau anggota yang pasif. Saya sengaja tidak menambahkannya sekarang karena butuh perubahan infrastruktur (migration) yang belum kamu minta.
+
+8. di bagian Roles & Izin, lakukan evaluasi UI/UX dan berikan rekomendasi-rekomendasi yang bagus untuk meningkatkan Roles & Izin yang informatif untuk CMS Berita Online, gunakan skill frontend-design dan ui-ux-pro-max untuk mendukung evaluasi UI/UX
+
+9. di bagian API Docs, lakukan evaluasi UI/UX dan berikan rekomendasi-rekomendasi yang bagus untuk meningkatkan API Docs yang informatif untuk CMS Berita Online, gunakan skill frontend-design dan ui-ux-pro-max untuk mendukung evaluasi UI/UX
+
+10. di bagian Settings Profile, lakukan evaluasi UI/UX dan berikan rekomendasi-rekomendasi yang bagus untuk meningkatkan Settings Profile yang informatif untuk CMS Berita Online, gunakan skill frontend-design dan ui-ux-pro-max untuk mendukung evaluasi UI/UX
+
+berikan saya fitur "Terakhir Login" sehingga system memiliki tracking login, jika fitur sudah diimplementasikan maka di daftar pengguna tampilkan terakhir login dan juga di settings profile. Di daftar pengguna tetap pertahankan Terakhir berkontribusi.

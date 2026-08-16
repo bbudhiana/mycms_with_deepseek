@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import { Monitor, Sun, Moon, Type, Check } from 'lucide-react';
 import { PageHeader, SectionCard } from '@/components/page-header';
+import { SettingsNav } from '@/components/settings-nav';
 import { cn } from '@/lib/utils';
 
 const themeOptions = [
@@ -28,6 +29,8 @@ export default function SettingsAppearance() {
                 title="Tampilan"
                 description="Sesuaikan tampilan aplikasi dengan preferensi Anda — dibangun di atas design tokens Tailwind."
             />
+
+            <SettingsNav />
 
             <div className="space-y-5">
                 <SectionCard

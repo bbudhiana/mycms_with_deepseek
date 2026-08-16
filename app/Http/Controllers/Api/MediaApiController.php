@@ -49,6 +49,9 @@ class MediaApiController extends Controller
             'uploaded_by' => $request->user()->id,
         ]);
 
+        $media->fillDimensions();
+        $media->ensureThumbnail();
+
         $this->activityLog->log('media.uploaded', $media, "Mengunggah media '{$media->original_name}'.");
 
         return (new MediaResource($media))->response()->setStatusCode(201);

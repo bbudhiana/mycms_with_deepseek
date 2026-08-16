@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ContentStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -33,6 +34,11 @@ class Category extends Model
     public function contents(): HasMany
     {
         return $this->hasMany(Content::class);
+    }
+
+    public function publishedContents(): HasMany
+    {
+        return $this->hasMany(Content::class)->where('status', ContentStatus::Published);
     }
 
     public function scopeSearch($query, ?string $search)

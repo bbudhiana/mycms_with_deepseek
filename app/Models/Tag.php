@@ -19,6 +19,13 @@ class Tag extends Model
 
     public $timestamps = true;
 
+    protected function casts(): array
+    {
+        return [
+            'contents_max_published_at' => 'datetime',
+        ];
+    }
+
     public function contents(): BelongsToMany
     {
         return $this->belongsToMany(Content::class, 'content_tags');

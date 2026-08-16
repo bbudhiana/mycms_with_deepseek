@@ -23,6 +23,7 @@ function getXsrfToken(): string {
 interface MediaItem {
     id: number;
     url: string;
+    thumbnail_url?: string | null;
     alt_text?: string | null;
     original_name: string;
     size: number;
@@ -49,7 +50,7 @@ export function MediaPicker({ open, onOpenChange, onSelect, canUpload = true, on
 
     const handleFilesSelected = (files: FileList) => {
         const fileArray = Array.from(files);
-        const imageFiles = fileArray.filter(f => f.type.startsWith('image/') || f.type === 'application/pdf');
+        const imageFiles = fileArray.filter((f) => f.type.startsWith('image/') || f.type === 'application/pdf');
         if (imageFiles.length === 0) {
             toast.error('Hanya file gambar dan PDF yang diperbolehkan.');
             return;
@@ -166,12 +167,7 @@ export function MediaPicker({ open, onOpenChange, onSelect, canUpload = true, on
                     />
                 </div>
 
-                {canUpload && (
-                    <DropZone
-                        onFilesSelected={handleFilesSelected}
-                        uploading={uploading}
-                    />
-                )}
+                {canUpload && <DropZone onFilesSelected={handleFilesSelected} uploading={uploading} />}
 
                 <UploadAltDialog
                     open={!!pendingFile}
@@ -212,7 +208,7 @@ export function MediaPicker({ open, onOpenChange, onSelect, canUpload = true, on
                                     <div className="aspect-[4/3] bg-muted">
                                         {item.mime_type?.startsWith('image') ? (
                                             <img
-                                                src={item.url}
+                                                src={item.thumbnail_url ?? item.url}
                                                 alt={item.alt_text ?? item.original_name}
                                                 className="h-full w-full object-cover"
                                                 loading="lazy"
@@ -305,13 +301,7 @@ function UploadAltDialog({
     );
 }
 
-function DropZone({
-    onFilesSelected,
-    uploading,
-}: {
-    onFilesSelected: (files: FileList) => void;
-    uploading: boolean;
-}) {
+function DropZone({ onFilesSelected, uploading }: { onFilesSelected: (files: FileList) => void; uploading: boolean }) {
     const [isDragActive, setIsDragActive] = React.useState(false);
 
     const handleDragOver = (e: React.DragEvent) => {
@@ -342,9 +332,7 @@ function DropZone({
             onDrop={handleDrop}
             className={cn(
                 'mt-4 rounded-lg border-2 border-dashed p-6 text-center transition-all duration-200',
-                isDragActive
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/50',
+                isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50',
             )}
         >
             <input
@@ -364,9 +352,7 @@ function DropZone({
             <p className="text-sm font-medium text-foreground mb-1">
                 {isDragActive ? 'Lepaskan file di sini' : 'Seret & lepas file di sini, atau klik untuk pilih'}
             </p>
-            <p className="text-xs text-muted-foreground mb-4">
-                Format: JPG, PNG, WebP, GIF, PDF · Maks 10MB
-            </p>
+            <p className="text-xs text-muted-foreground mb-4">Format: JPG, PNG, WebP, GIF, PDF · Maks 10MB</p>
             <Button
                 variant="outline"
                 disabled={uploading}

@@ -1,6 +1,7 @@
 import { Head, useForm } from '@inertiajs/react';
 import { KeyRound, ShieldCheck, Fingerprint, Plus, Trash2 } from 'lucide-react';
 import { PageHeader, SectionCard } from '@/components/page-header';
+import { SettingsNav } from '@/components/settings-nav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label, FieldError } from '@/components/ui/field';
@@ -48,6 +49,8 @@ export default function SettingsSecurity({ twoFactorEnabled, hasPasskeys }: Prop
                 title="Keamanan"
                 description="Kelola kata sandi dan metode autentikasi akun Anda."
             />
+
+            <SettingsNav />
 
             <div className="space-y-5">
                 <SectionCard

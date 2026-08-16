@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Listeners\UpdateLastLoginAt;
 use App\Models\Category;
 use App\Models\Content;
 use App\Models\Media;
@@ -16,6 +17,8 @@ use App\Policies\MediaPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\TagPolicy;
 use App\Policies\UserPolicy;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
@@ -47,6 +50,8 @@ class AppServiceProvider extends ServiceProvider
 
         $this->registerPolicies();
         $this->registerObservers();
+
+        Event::listen(Login::class, UpdateLastLoginAt::class);
     }
 
     private function registerPolicies(): void

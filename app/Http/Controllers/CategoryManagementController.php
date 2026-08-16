@@ -17,16 +17,25 @@ class CategoryManagementController extends Controller
 
     public function index(Request $request, ?Category $category = null)
     {
-        $categories = Category::query()
-            ->withCount(['contents', 'children'])
-            ->with('parent:id,name')
-            ->when($request->filled('search'), fn ($q) => $q->where('name', 'like', '%'.$request->string('search').'%'))
-            ->orderBy('name')
-            ->paginate(20)
-            ->withQueryString();
+        $search = $request->string('search')->trim()->toString();
+
+        if ($search !== '') {
+            $tree = null;
+            $categories = $this->cmsData->searchCategories($search);
+        } else {
+            $tree = $this->cmsData->categoryTaxonomy();
+            $categories = null;
+        }
 
         return Inertia::render('Categories/Index', [
+            'tree' => $tree,
             'categories' => $categories,
+            'stats' => [
+                'total' => Category::count(),
+                'roots' => Category::whereNull('parent_id')->count(),
+                'subcategories' => Category::whereNotNull('parent_id')->count(),
+                'unused' => Category::whereDoesntHave('contents')->count(),
+            ],
             'filters' => $request->only(['search']),
             'editing' => $category ? $category->load('parent:id,name') : null,
             'parentOptions' => $this->cmsData->categoryTree($category),

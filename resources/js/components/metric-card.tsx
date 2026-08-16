@@ -10,6 +10,7 @@ export function MetricCard({
     hint,
     delta,
     deltaLabel,
+    active = false,
     onClick,
 }: {
     label: string;
@@ -19,6 +20,7 @@ export function MetricCard({
     hint?: string;
     delta?: number | null;
     deltaLabel?: string;
+    active?: boolean;
     onClick?: () => void;
 }) {
     const toneMap: Record<string, string> = {
@@ -52,6 +54,7 @@ export function MetricCard({
             className={cn(
                 'rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-colors duration-200',
                 onClick && 'cursor-pointer hover:border-primary/40',
+                active && 'border-primary/50 ring-2 ring-primary/20',
             )}
         >
             <div className="flex items-center justify-between">

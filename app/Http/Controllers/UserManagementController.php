@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ContentStatus;
 use App\Http\Requests\UserRequest;
 use App\Models\User;
 use App\Services\ActivityLogService;
@@ -19,9 +20,22 @@ class UserManagementController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
+        $sort = $request->input('sort', 'name');
+        if (! in_array($sort, ['name', 'created', 'contributions', 'login'], true)) {
+            $sort = 'name';
+        }
+        $status = $request->input('status', 'all');
+        $verified = $request->input('verified', 'all');
+
         $users = User::query()
+            ->select(['id', 'name', 'email', 'job_title', 'is_active', 'email_verified_at', 'profile_photo_path', 'created_at', 'last_login_at'])
             ->with('roles:id,name')
-            ->select(['id', 'name', 'email', 'job_title', 'is_active', 'email_verified_at'])
+            ->withCount([
+                'contents',
+                'contents as published_author_count' => fn ($q) => $q->where('status', ContentStatus::Published),
+                'reviews',
+            ])
+            ->withMax('contents', 'updated_at')
             ->when($request->filled('search'), fn ($q) => $q->where(function ($q) use ($request) {
                 $q->where('name', 'like', '%'.$request->string('search').'%')
                     ->orWhere('email', 'like', '%'.$request->string('search').'%');
@@ -29,16 +43,25 @@ class UserManagementController extends Controller
             ->when($request->filled('role') && $request->input('role') !== 'all', function ($q) use ($request) {
                 $q->role($request->string('role'));
             })
-            ->when($request->filled('status') && $request->input('status') !== 'all', function ($q) use ($request) {
-                $q->where('is_active', $request->input('status') === 'active');
-            })
-            ->orderBy('name')
+            ->when($status === 'active', fn ($q) => $q->where('is_active', true))
+            ->when($status === 'inactive', fn ($q) => $q->where('is_active', false))
+            ->when($verified === 'no', fn ($q) => $q->whereNull('email_verified_at'))
+            ->when($sort === 'created', fn ($q) => $q->orderByDesc('created_at'))
+            ->when($sort === 'contributions', fn ($q) => $q->orderByDesc('contents_count'))
+            ->when($sort === 'login', fn ($q) => $q->orderByDesc('last_login_at'))
+            ->when($sort === 'name', fn ($q) => $q->orderBy('name'))
             ->paginate(20)
             ->withQueryString();
 
         return Inertia::render('Users/Index', [
             'users' => $users,
-            'filters' => $request->only(['search', 'role', 'status']),
+            'stats' => [
+                'total' => User::count(),
+                'active' => User::where('is_active', true)->count(),
+                'inactive' => User::where('is_active', false)->count(),
+                'unverified' => User::whereNull('email_verified_at')->count(),
+            ],
+            'filters' => $request->only(['search', 'role', 'status', 'verified', 'sort']),
             'roles' => Role::query()->orderBy('name')->get(['id', 'name']),
             'can' => [
                 'manage' => $request->user()->hasPermissionTo('manage_user'),
