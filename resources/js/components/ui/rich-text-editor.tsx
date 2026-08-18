@@ -114,6 +114,8 @@ export function RichTextEditor({
 
     // Initialize / sync the contentEditable element from the controlled value.
     // Skip when the user is actively editing, so we never clobber their input.
+    // `readOnly` in deps: saat berubah (mis. published → draft setelah Tarik Publikasi),
+    // contentEditable baru di-mount dalam keadaan kosong dan perlu diisi ulang.
     React.useEffect(() => {
         const el = editorRef.current;
         if (!el) return;
@@ -121,7 +123,7 @@ export function RichTextEditor({
         if (el.innerHTML !== value) {
             el.innerHTML = value;
         }
-    }, [value]);
+    }, [value, readOnly]);
 
     if (readOnly) {
         return (

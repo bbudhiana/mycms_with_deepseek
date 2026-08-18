@@ -88,6 +88,7 @@ export default function ContentsEditor({
     const [picker, setPicker] = useState<'featured' | 'thumbnail' | 'body' | null>(null);
     const [scheduleOpen, setScheduleOpen] = useState(false);
     const [rejectOpen, setRejectOpen] = useState(false);
+    const [unpublishOpen, setUnpublishOpen] = useState(false);
 
     const initialSnapshot = useMemo(
         () => ({
@@ -555,7 +556,7 @@ export default function ContentsEditor({
                                     <WorkflowActions
                                         can={can}
                                         onPublish={() => action(`/contents/${content!.id}/publish`)}
-                                        onUnpublish={() => action(`/contents/${content!.id}/unpublish`)}
+                                        onUnpublish={() => setUnpublishOpen(true)}
                                         onArchive={() => action(`/contents/${content!.id}/archive`)}
                                         onSchedule={() => setScheduleOpen(true)}
                                         onReject={() => setRejectOpen(true)}
@@ -605,6 +606,7 @@ export default function ContentsEditor({
 
             <ScheduleDialog open={scheduleOpen} onOpenChange={setScheduleOpen} contentId={content?.id} />
             <ReviewNotesDialog open={rejectOpen} onOpenChange={setRejectOpen} mode="reject" contentId={content?.id} />
+            <UnpublishDialog open={unpublishOpen} onOpenChange={setUnpublishOpen} contentId={content?.id} />
         </>
     );
 }
@@ -809,6 +811,61 @@ function ScheduleDialog({
                         </Button>
                     </DialogFooter>
                 </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function UnpublishDialog({
+    open,
+    onOpenChange,
+    contentId,
+}: {
+    open: boolean;
+    onOpenChange: (o: boolean) => void;
+    contentId?: number;
+}) {
+    const [processing, setProcessing] = useState(false);
+
+    const confirm = () => {
+        if (!contentId) return;
+        setProcessing(true);
+        router.post(
+            `/contents/${contentId}/unpublish`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setProcessing(false),
+                onSuccess: () => onOpenChange(false),
+            },
+        );
+    };
+
+    if (!contentId) return null;
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Tarik Publikasi</DialogTitle>
+                    <DialogDescription>
+                        Artikel akan ditarik dari publikasi dan dikembalikan ke status <strong>draft</strong>.
+                        Artikel yang sudah disebarluaskan akan berhenti tampil sebagai konten terbit.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="mt-2 rounded-md border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
+                    <strong>Perhatian:</strong> menarik publikasi berita yang sudah tayang dapat berdampak negatif
+                    pada kredibilitas situs berita. Pastikan keputusan ini benar-benar diperlukan sebelum
+                    melanjutkan.
+                </div>
+                <DialogFooter>
+                    <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                        Batal
+                    </Button>
+                    <Button type="button" variant="destructive" onClick={confirm} disabled={processing}>
+                        Ya, Tarik Publikasi
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );
