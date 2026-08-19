@@ -5,12 +5,8 @@
             "type": "local",
             "enabled": true,
             "command": [
-                "docker",
-                "exec",
-                "-i",
-                "frankenphp",
                 "php",
-                "/var/www/html/mycms_with_deepseek/artisan",
+                "artisan",
                 "boost:mcp"
             ]
         }
