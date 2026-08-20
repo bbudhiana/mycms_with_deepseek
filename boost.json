@@ -2,7 +2,8 @@
     "agents": [
         "antigravity",
         "opencode",
-        "copilot"
+        "copilot",
+        "codex"
     ],
     "cloud": false,
     "guidelines": true,
