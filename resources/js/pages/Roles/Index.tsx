@@ -88,6 +88,7 @@ export default function RolesIndex({ roles, permissions, permissionGroups, stats
         deleteConfirm.confirm({
             title: 'Hapus peran',
             description: `Hapus peran "${formatRoleName(role.name)}"? Tindakan ini tidak dapat dibatalkan.`,
+            confirmVariant: 'destructive',
             onConfirm: () => router.delete(`/roles/${role.id}`),
         });
     };

@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, CircleCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import {
     Dialog,
     DialogContent,
@@ -34,18 +35,25 @@ export function ConfirmDialog({ dialog }: { dialog: ConfirmDialogState & { close
         open,
         title,
         description,
-        confirmLabel = 'Hapus',
-        confirmVariant = 'destructive',
+        confirmLabel = 'Konfirmasi',
+        confirmVariant = 'primary',
         onConfirm,
         close,
     } = dialog;
+    const destructive = confirmVariant === 'destructive';
+    const Icon = destructive ? AlertTriangle : CircleCheck;
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && close()}>
             <DialogContent className="max-w-sm">
                 <DialogHeader>
-                    <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
-                        <AlertTriangle className="h-5 w-5 text-destructive" />
+                    <div
+                        className={cn(
+                            'mb-2 flex h-10 w-10 items-center justify-center rounded-full',
+                            destructive ? 'bg-destructive/10' : 'bg-primary/10',
+                        )}
+                    >
+                        <Icon className={cn('h-5 w-5', destructive ? 'text-destructive' : 'text-primary')} />
                     </div>
                     <DialogTitle>{title}</DialogTitle>
                     {description ? <DialogDescription>{description}</DialogDescription> : null}

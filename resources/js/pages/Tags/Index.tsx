@@ -99,6 +99,7 @@ export default function TagsIndex({ tags, stats, filters, can }: Props) {
         deleteConfirm.confirm({
             title: 'Hapus tag',
             description: `Hapus tag "${tag.name}"? Tag ini digunakan oleh ${tag.contents_count} konten.`,
+            confirmVariant: 'destructive',
             onConfirm: () => router.delete(`/tags/${tag.id}`),
         });
     };

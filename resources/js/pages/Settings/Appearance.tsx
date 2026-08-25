@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/react';
 import { Monitor, Sun, Moon, Type, Check } from 'lucide-react';
 import { PageHeader, SectionCard } from '@/components/page-header';
 import { SettingsNav } from '@/components/settings-nav';
+import { THEME_KEY, applyTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
 const themeOptions = [
@@ -18,8 +19,14 @@ const fontOptions = [
 ];
 
 export default function SettingsAppearance() {
-    const [theme, setTheme] = useState('system');
+    const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) ?? 'system');
     const [fontScale, setFontScale] = useState('base');
+
+    const selectTheme = (id: string) => {
+        setTheme(id);
+        localStorage.setItem(THEME_KEY, id);
+        applyTheme(id);
+    };
 
     return (
         <>
@@ -27,7 +34,7 @@ export default function SettingsAppearance() {
             <PageHeader
                 eyebrow="Pengaturan"
                 title="Tampilan"
-                description="Sesuaikan tampilan aplikasi dengan preferensi Anda — dibangun di atas design tokens Tailwind."
+                description="Sesuaikan tampilan aplikasi dengan preferensi Anda."
             />
 
             <SettingsNav />
@@ -35,7 +42,7 @@ export default function SettingsAppearance() {
             <div className="space-y-5">
                 <SectionCard
                     title="Tema"
-                    description="Pilih skema warna untuk antarmuka. Saat ini bersifat informatif dan belum diterapkan secara dinamis."
+                    description="Pilih skema warna untuk antarmuka. Perubahan langsung diterapkan dan tersimpan di perangkat ini."
                 >
                     <div className="grid gap-3 sm:grid-cols-3">
                         {themeOptions.map((opt) => {
@@ -45,7 +52,7 @@ export default function SettingsAppearance() {
                                 <button
                                     key={opt.id}
                                     type="button"
-                                    onClick={() => setTheme(opt.id)}
+                                    onClick={() => selectTheme(opt.id)}
                                     className={cn(
                                         'relative flex flex-col items-start gap-3 rounded-xl border p-4 text-left transition-colors',
                                         selected ? 'border-primary/50 bg-primary/5' : 'border-border hover:bg-muted/40',

@@ -130,6 +130,7 @@ export default function UsersIndex({ users, filters, stats, roles, can }: Props)
                 title: 'Nonaktifkan pengguna',
                 description: `Hentikan akses "${user.name}"? Pengguna tidak dapat masuk ke sistem sampai diaktifkan kembali.`,
                 confirmLabel: 'Nonaktifkan',
+                confirmVariant: 'destructive',
                 onConfirm: () => submitToggle(user),
             });
         } else {
@@ -146,6 +147,7 @@ export default function UsersIndex({ users, filters, stats, roles, can }: Props)
         deleteConfirm.confirm({
             title: 'Hapus pengguna',
             description: `Hapus akun "${user.name}" secara permanen? ${contentNote}`,
+            confirmVariant: 'destructive',
             onConfirm: () => router.delete(`/users/${user.id}`),
         });
     };

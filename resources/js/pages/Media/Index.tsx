@@ -633,6 +633,7 @@ export default function MediaIndex({ media, filters, stats, can }: Props) {
                             (usageCount(item) > 0
                                 ? ` Aset ini dipakai di ${usageCount(item)} artikel dan akan kehilangan gambarnya.`
                                 : ''),
+                        confirmVariant: 'destructive',
                         onConfirm: () => {
                             router.delete(`/media/${item.id}`, { preserveScroll: true });
                             setSelected(null);

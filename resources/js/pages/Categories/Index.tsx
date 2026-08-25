@@ -163,6 +163,7 @@ export default function CategoriesIndex({ tree, categories, filters, stats, edit
         deleteConfirm.confirm({
             title: 'Hapus kategori',
             description: `Hapus kategori "${row.name}"? Kategori ini berisi ${rowCounts(row) || 'tidak ada konten atau sub-kategori'}.`,
+            confirmVariant: 'destructive',
             onConfirm: () => router.delete(`/categories/${row.id}`),
         });
     };

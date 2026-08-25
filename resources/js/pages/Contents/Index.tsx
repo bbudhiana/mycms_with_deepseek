@@ -242,6 +242,7 @@ export default function ContentsIndex({ contents, filters, statuses, categories,
                                     deleteConfirm.confirm({
                                         title: 'Hapus konten',
                                         description: `Hapus "${item.title}" secara permanen?`,
+                                        confirmVariant: 'destructive',
                                         onConfirm: () => router.delete(`/contents/${item.id}`),
                                     })
                                 }
@@ -368,6 +369,7 @@ export default function ContentsIndex({ contents, filters, statuses, categories,
                                                                     deleteConfirm.confirm({
                                                                         title: 'Hapus konten',
                                                                         description: `Hapus "${item.title}" secara permanen?`,
+                                                                        confirmVariant: 'destructive',
                                                                         onConfirm: () =>
                                                                             router.delete(`/contents/${item.id}`),
                                                                     })

@@ -11,7 +11,7 @@ export interface FunnelStage {
 export function EditorialFunnel({ stages }: { stages: FunnelStage[] }) {
     const total = stages.reduce((sum, s) => sum + s.count, 0) || 1;
 
-    const dropoffs = stages.slice(1).map((stage, i) => {
+    const dropoffs = stages.slice(1, -1).map((stage, i) => {
         const prev = stages[i];
         if (prev.count <= 0) return { stage: null as FunnelStage | null, ratio: 0 };
         return { stage, ratio: stage.count / prev.count };

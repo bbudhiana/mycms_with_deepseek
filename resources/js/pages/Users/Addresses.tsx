@@ -174,6 +174,7 @@ export default function UsersAddresses({ user, can }: Props) {
                                             deleteConfirm.confirm({
                                                 title: 'Hapus alamat',
                                                 description: `Hapus alamat "${address.label || address.address_line1}"?`,
+                                                confirmVariant: 'destructive',
                                                 onConfirm: () =>
                                                     router.delete(`/users/${user.id}/addresses/${address.id}`),
                                             })

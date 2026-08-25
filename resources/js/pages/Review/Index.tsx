@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
+import { toast } from 'sonner';
 import { NotebookPen, Check, X, MessageSquareText, Clock, Eye, FileText } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
@@ -71,6 +72,7 @@ export default function ReviewIndex({
 }) {
     const [reviewing, setReviewing] = useState<ReviewItem | null>(null);
     const [dialog, setDialog] = useState<'approve' | 'request' | 'reject' | 'preview' | null>(null);
+    const [focusedIndex, setFocusedIndex] = useState(0);
 
     const items = queue.data ?? [];
     const oldestWait = items.reduce((max, i) => Math.max(max, i.waiting_hours ?? 0), 0);
@@ -79,6 +81,57 @@ export default function ReviewIndex({
         setReviewing(item);
         setDialog(mode);
     };
+
+    useEffect(() => {
+        const isTyping = (el: EventTarget | null) => {
+            if (!(el instanceof HTMLElement)) return false;
+            const tag = el.tagName.toLowerCase();
+            return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable;
+        };
+
+        const onKey = (e: KeyboardEvent) => {
+            if (isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+            if (items.length === 0) return;
+
+            const key = e.key.toLowerCase();
+
+            if (key === 'j') {
+                e.preventDefault();
+                setFocusedIndex((i) => Math.min(items.length - 1, i + 1));
+                return;
+            }
+            if (key === 'k') {
+                e.preventDefault();
+                setFocusedIndex((i) => Math.max(0, i - 1));
+                return;
+            }
+            if (key === '?') {
+                e.preventDefault();
+                toast.info('Pintasan: J/K pindah baris · S setujui · R revisi · T tolak · P pratinjau · ? bantuan');
+                return;
+            }
+
+            const focused = items[focusedIndex];
+            if (!focused) return;
+
+            if (key === 's') {
+                e.preventDefault();
+                openDialog(focused, 'approve');
+            } else if (key === 'r') {
+                e.preventDefault();
+                openDialog(focused, 'request');
+            } else if (key === 't') {
+                e.preventDefault();
+                openDialog(focused, 'reject');
+            } else if (key === 'p') {
+                e.preventDefault();
+                openDialog(focused, 'preview');
+            }
+        };
+
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [items, focusedIndex]);
 
     return (
         <>
@@ -109,6 +162,12 @@ export default function ReviewIndex({
                             Ada artikel sudah lama menunggu — prioritaskan
                         </span>
                     ) : null}
+                    <span
+                        className="ml-auto rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+                        title="Pintasan keyboard: J/K pindah baris, S setujui, R revisi, T tolak, P pratinjau, ? bantuan"
+                    >
+                        Tekan <kbd className="font-mono">?</kbd> untuk pintasan
+                    </span>
                 </div>
             )}
 
@@ -156,10 +215,14 @@ export default function ReviewIndex({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {items.map((item) => (
+                                    {items.map((item, i) => (
                                         <tr
                                             key={item.id}
-                                            className="border-b border-border transition-colors hover:bg-muted/30"
+                                            aria-current={i === focusedIndex ? 'true' : undefined}
+                                            className={cn(
+                                                'border-b border-border transition-colors hover:bg-muted/30',
+                                                i === focusedIndex && 'bg-primary/5 ring-1 ring-inset ring-primary/40',
+                                            )}
                                         >
                                             <td className="max-w-[360px] px-4 py-3">
                                                 <div className="flex items-center gap-3">
@@ -200,14 +263,25 @@ export default function ReviewIndex({
                                                 />
                                             </td>
                                             <td className="px-4 py-3">
-                                                <div className="flex justify-end gap-1.5">
+                                                <div className="flex items-center justify-end gap-1.5">
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => openDialog(item, 'preview')}
+                                                        aria-label={`Pratinjau ${item.title}`}
+                                                        title="Pratinjau"
                                                     >
-                                                        <Eye className="h-4 w-4" /> Pratinjau
+                                                        <Eye className="h-4 w-4" />
                                                     </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-destructive hover:text-destructive"
+                                                        onClick={() => openDialog(item, 'reject')}
+                                                    >
+                                                        <X className="h-4 w-4" /> Tolak
+                                                    </Button>
+                                                    <span className="mx-1 h-4 w-px bg-border" aria-hidden />
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
@@ -222,14 +296,6 @@ export default function ReviewIndex({
                                                         onClick={() => openDialog(item, 'approve')}
                                                     >
                                                         <Check className="h-4 w-4" /> Setujui
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-destructive hover:text-destructive"
-                                                        onClick={() => openDialog(item, 'reject')}
-                                                    >
-                                                        <X className="h-4 w-4" /> Tolak
                                                     </Button>
                                                 </div>
                                             </td>

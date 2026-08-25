@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import {
     Save,
@@ -13,6 +13,7 @@ import {
     UploadCloud,
     CalendarClock,
     Archive,
+    MessageSquareText,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge, formatDate } from '@/components/status-badge';
@@ -33,6 +34,7 @@ import {
     DialogDescription,
     DialogFooter,
 } from '@/components/ui/dialog';
+import { ConfirmDialog, useConfirmDialog } from '@/components/confirm-dialog';
 import { SectionCard } from '@/components/page-header';
 import { Breadcrumbs } from '@/components/ui/breadcrumb';
 
@@ -88,7 +90,9 @@ export default function ContentsEditor({
     const [picker, setPicker] = useState<'featured' | 'thumbnail' | 'body' | null>(null);
     const [scheduleOpen, setScheduleOpen] = useState(false);
     const [rejectOpen, setRejectOpen] = useState(false);
+    const [publishOpen, setPublishOpen] = useState(false);
     const [unpublishOpen, setUnpublishOpen] = useState(false);
+    const [archiveOpen, setArchiveOpen] = useState(false);
 
     const initialSnapshot = useMemo(
         () => ({
@@ -200,24 +204,71 @@ export default function ContentsEditor({
         async (html: string) => {
             if (isCreate || !editable || !content) return;
 
-            await router.patch(
-                `/contents/${content.id}`,
-                { body: html },
-                {
-                    preserveState: true,
-                    preserveScroll: true,
-                    onSuccess: () => {
-                        snapshotRef.current = { ...snapshotRef.current, body: html };
-                        setLastSavedAt(new Date());
+            return new Promise<void>((resolve, reject) => {
+                router.patch(
+                    `/contents/${content.id}`,
+                    { body: html },
+                    {
+                        preserveState: true,
+                        preserveScroll: true,
+                        onSuccess: () => {
+                            snapshotRef.current = { ...snapshotRef.current, body: html };
+                            setLastSavedAt(new Date());
+                            resolve();
+                        },
+                        onError: () => {
+                            reject(new Error('Autosave failed'));
+                        },
                     },
-                    onError: () => {
-                        throw new Error('Autosave failed');
-                    },
-                },
-            );
+                );
+            });
         },
         [isCreate, editable, content?.id, router],
     );
+
+    // Guard: tolak navigasi & unload ketika ada perubahan belum disimpan.
+    const discardDialog = useConfirmDialog();
+    const pendingNavRef = useRef<(() => void) | null>(null);
+
+    useEffect(() => {
+        if (!isDirty) return;
+
+        const onBeforeUnload = (e: BeforeUnloadEvent) => {
+            e.preventDefault();
+            e.returnValue = '';
+        };
+        window.addEventListener('beforeunload', onBeforeUnload);
+
+        const removeListener = router.on('before', (event) => {
+            if (!isDirty) return;
+            const visit = event.detail.visit;
+            event.preventDefault();
+            pendingNavRef.current = () => {
+                pendingNavRef.current = null;
+                router.on('before', () => true);
+                if (visit.method === 'post') {
+                    router.post(visit.url, visit.data ?? {});
+                } else {
+                    router.visit(visit.url);
+                }
+            };
+            discardDialog.confirm({
+                title: 'Perubahan belum disimpan',
+                description:
+                    'Ada perubahan yang belum tersimpan di artikel ini. Yakin keluar dari halaman? Perubahan akan hilang.',
+                confirmLabel: 'Ya, keluar',
+                onConfirm: () => {
+                    window.removeEventListener('beforeunload', onBeforeUnload);
+                    pendingNavRef.current?.();
+                },
+            });
+        });
+
+        return () => {
+            window.removeEventListener('beforeunload', onBeforeUnload);
+            removeListener();
+        };
+    }, [isDirty, router, discardDialog]);
 
     const toggleTag = (id: number) => {
         const exists = form.data.tags.includes(id);
@@ -555,9 +606,9 @@ export default function ContentsEditor({
                                 <div className="border-t border-border px-5 py-4 space-y-2">
                                     <WorkflowActions
                                         can={can}
-                                        onPublish={() => action(`/contents/${content!.id}/publish`)}
+                                        onPublish={() => setPublishOpen(true)}
                                         onUnpublish={() => setUnpublishOpen(true)}
-                                        onArchive={() => action(`/contents/${content!.id}/archive`)}
+                                        onArchive={() => setArchiveOpen(true)}
                                         onSchedule={() => setScheduleOpen(true)}
                                         onReject={() => setRejectOpen(true)}
                                         onApprove={() => action(`/contents/${content!.id}/approve`)}
@@ -606,7 +657,10 @@ export default function ContentsEditor({
 
             <ScheduleDialog open={scheduleOpen} onOpenChange={setScheduleOpen} contentId={content?.id} />
             <ReviewNotesDialog open={rejectOpen} onOpenChange={setRejectOpen} mode="reject" contentId={content?.id} />
+            <PublishDialog open={publishOpen} onOpenChange={setPublishOpen} contentId={content?.id} />
             <UnpublishDialog open={unpublishOpen} onOpenChange={setUnpublishOpen} contentId={content?.id} />
+            <ArchiveDialog open={archiveOpen} onOpenChange={setArchiveOpen} contentId={content?.id} />
+            <ConfirmDialog dialog={discardDialog.dialog} />
         </>
     );
 }
@@ -729,36 +783,50 @@ function WorkflowActions({
     onApprove: () => void;
 }) {
     return (
-        <div className="space-y-2">
-            {can.reviewAction ? (
-                <>
-                    <Button type="button" variant="default" className="w-full" onClick={onApprove}>
-                        <Check className="h-4 w-4" /> Setujui
-                    </Button>
-                    <Button type="button" variant="secondary" className="w-full" onClick={onReject}>
-                        <X className="h-4 w-4" /> Tolak / Minta Revisi
-                    </Button>
-                </>
-            ) : null}
-            {can.publish ? (
-                <div className="flex gap-2">
-                    <Button type="button" className="flex-1" onClick={onPublish}>
-                        <UploadCloud className="h-4 w-4" /> Terbit
-                    </Button>
-                    <Button type="button" variant="outline" className="flex-1" onClick={onSchedule}>
-                        <CalendarClock className="h-4 w-4" /> Jadwalkan
-                    </Button>
+        <div className="space-y-4">
+            {can.reviewAction || can.publish ? (
+                <div className="space-y-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Tindakan Utama
+                    </p>
+                    {can.reviewAction ? (
+                        <>
+                            <Button type="button" variant="default" className="w-full" onClick={onApprove}>
+                                <Check className="h-4 w-4" /> Setujui
+                            </Button>
+                            <Button type="button" variant="outline" className="w-full" onClick={onReject}>
+                                <MessageSquareText className="h-4 w-4" /> Minta Revisi
+                            </Button>
+                        </>
+                    ) : null}
+                    {can.publish ? (
+                        <div className="flex gap-2">
+                            <Button type="button" className="flex-1" onClick={onPublish}>
+                                <UploadCloud className="h-4 w-4" /> Terbit
+                            </Button>
+                            <Button type="button" variant="outline" className="flex-1" onClick={onSchedule}>
+                                <CalendarClock className="h-4 w-4" /> Jadwalkan
+                            </Button>
+                        </div>
+                    ) : null}
                 </div>
             ) : null}
-            {can.unpublish ? (
-                <Button type="button" variant="outline" className="w-full" onClick={onUnpublish}>
-                    <Clock className="h-4 w-4" /> Tarik Publikasi
-                </Button>
-            ) : null}
-            {can.archive ? (
-                <Button type="button" variant="secondary" className="w-full" onClick={onArchive}>
-                    <Archive className="h-4 w-4" /> Arsipkan
-                </Button>
+            {can.unpublish || can.archive ? (
+                <div className="space-y-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Pasca-Terbit
+                    </p>
+                    {can.unpublish ? (
+                        <Button type="button" variant="outline" className="w-full" onClick={onUnpublish}>
+                            <Clock className="h-4 w-4" /> Tarik Publikasi
+                        </Button>
+                    ) : null}
+                    {can.archive ? (
+                        <Button type="button" variant="ghost" className="w-full text-destructive hover:text-destructive" onClick={onArchive}>
+                            <Archive className="h-4 w-4" /> Arsipkan
+                        </Button>
+                    ) : null}
+                </div>
             ) : null}
         </div>
     );
@@ -816,6 +884,60 @@ function ScheduleDialog({
     );
 }
 
+function PublishDialog({
+    open,
+    onOpenChange,
+    contentId,
+}: {
+    open: boolean;
+    onOpenChange: (o: boolean) => void;
+    contentId?: number;
+}) {
+    const [processing, setProcessing] = useState(false);
+
+    const confirm = () => {
+        if (!contentId) return;
+        setProcessing(true);
+        router.post(
+            `/contents/${contentId}/publish`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setProcessing(false),
+                onSuccess: () => onOpenChange(false),
+            },
+        );
+    };
+
+    if (!contentId) return null;
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Terbitkan Artikel</DialogTitle>
+                    <DialogDescription>
+                        Artikel akan langsung tampil sebagai konten terbit di situs berita. Pastikan judul dan isi
+                        sudah final sebelum melanjutkan.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="mt-2 rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
+                    <strong>Konfirmasi:</strong> setelah terbit, artikel dapat dilihat publik. Anda masih dapat
+                    menarik publikasi atau mengarsipkan artikel dari halaman ini.
+                </div>
+                <DialogFooter>
+                    <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                        Batal
+                    </Button>
+                    <Button type="button" onClick={confirm} disabled={processing}>
+                        {processing ? 'Menerbitkan…' : 'Ya, Terbitkan'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 function UnpublishDialog({
     open,
     onOpenChange,
@@ -864,6 +986,61 @@ function UnpublishDialog({
                     </Button>
                     <Button type="button" variant="destructive" onClick={confirm} disabled={processing}>
                         Ya, Tarik Publikasi
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function ArchiveDialog({
+    open,
+    onOpenChange,
+    contentId,
+}: {
+    open: boolean;
+    onOpenChange: (o: boolean) => void;
+    contentId?: number;
+}) {
+    const [processing, setProcessing] = useState(false);
+
+    const confirm = () => {
+        if (!contentId) return;
+        setProcessing(true);
+        router.post(
+            `/contents/${contentId}/archive`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setProcessing(false),
+                onSuccess: () => onOpenChange(false),
+            },
+        );
+    };
+
+    if (!contentId) return null;
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Arsipkan Artikel</DialogTitle>
+                    <DialogDescription>
+                        Artikel akan dipindahkan ke status <strong>Arsip</strong>. Artikel tidak lagi tampil di
+                        daftar terbit dan tidak dapat dipublikasikan kembali dari halaman ini tanpa tindakan
+                        admin.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="mt-2 rounded-md border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
+                    <strong>Perhatian:</strong> pengarsipan menandai akhir dari siklus editorial artikel ini.
+                    Pastikan ini adalah keputusan yang memang diinginkan.
+                </div>
+                <DialogFooter>
+                    <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                        Batal
+                    </Button>
+                    <Button type="button" variant="destructive" onClick={confirm} disabled={processing}>
+                        {processing ? 'Mengarsipkan…' : 'Ya, Arsipkan'}
                     </Button>
                 </DialogFooter>
             </DialogContent>

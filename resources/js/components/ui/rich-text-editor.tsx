@@ -57,6 +57,7 @@ export function RichTextEditor({
     const toolbarRef = React.useRef<HTMLDivElement>(null);
     const [focused, setFocused] = React.useState(false);
     const [toolbarStuck, setToolbarStuck] = React.useState(false);
+    const [linkOpen, setLinkOpen] = React.useState(false);
     const [autosaveStatus, setAutosaveStatus] = React.useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     const autosaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -95,7 +96,6 @@ export function RichTextEditor({
                 setTimeout(() => setAutosaveStatus('idle'), 2000);
             } catch {
                 setAutosaveStatus('error');
-                setTimeout(() => setAutosaveStatus('idle'), 3000);
             }
         }, autosaveDelay);
     }, [onAutosave, value, autosaveDelay]);
@@ -163,15 +163,14 @@ export function RichTextEditor({
                 <ToolButton label="Kutipan" onClick={() => exec('formatBlock', 'blockquote')}>
                     <Quote className="h-4 w-4" />
                 </ToolButton>
-                <ToolButton
-                    label="Link"
-                    onClick={() => {
-                        const url = window.prompt('URL tautan:');
-                        if (url) exec('createLink', url);
+                <LinkButton
+                    open={linkOpen}
+                    onOpenChange={setLinkOpen}
+                    onSubmit={(url) => {
+                        setLinkOpen(false);
+                        exec('createLink', url);
                     }}
-                >
-                    <Link2 className="h-4 w-4" />
-                </ToolButton>
+                />
                 {onRequestImage ? (
                     <ToolButton label="Sisipkan gambar" onClick={onRequestImage}>
                         <ImagePlus className="h-4 w-4" />
@@ -228,15 +227,126 @@ export function RichTextEditor({
                             </>
                         )}
                         {autosaveStatus === 'error' && (
-                            <>
-                                <AlertCircle className="h-3 w-3 text-destructive" aria-hidden="true" />
-                                <span>Gagal menyimpan</span>
-                            </>
+                            <button
+                                type="button"
+                                onClick={triggerAutosave}
+                                className="inline-flex items-center gap-1.5 rounded-md bg-destructive/10 px-2 py-1 font-medium text-destructive transition-colors hover:bg-destructive/20"
+                            >
+                                <AlertCircle className="h-3 w-3" aria-hidden="true" />
+                                <span>Simpan gagal — coba lagi</span>
+                            </button>
                         )}
                         {autosaveStatus === 'idle' && <span className="text-muted-foreground/60">Siap simpan</span>}
                     </div>
                 )}
             </div>
+        </div>
+    );
+}
+
+function LinkButton({
+    open,
+    onOpenChange,
+    onSubmit,
+}: {
+    open: boolean;
+    onOpenChange: (o: boolean) => void;
+    onSubmit: (url: string) => void;
+}) {
+    const [url, setUrl] = React.useState('');
+    const inputRef = React.useRef<HTMLInputElement>(null);
+    const containerRef = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        if (open) {
+            setUrl('');
+            requestAnimationFrame(() => inputRef.current?.focus());
+        }
+    }, [open]);
+
+    React.useEffect(() => {
+        if (!open) return;
+        const onDown = (e: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                onOpenChange(false);
+            }
+        };
+        document.addEventListener('mousedown', onDown);
+        return () => document.removeEventListener('mousedown', onDown);
+    }, [open, onOpenChange]);
+
+    const trimmed = url.trim();
+    const valid = /^https?:\/\/\S+/i.test(trimmed) || /^mailto:\S+@/i.test(trimmed) || /^\/[a-z0-9\-/]+$/i.test(trimmed);
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!valid) return;
+        onSubmit(trimmed);
+    };
+
+    return (
+        <div ref={containerRef} className="relative">
+            <button
+                type="button"
+                title="Link"
+                aria-label="Link"
+                aria-expanded={open}
+                aria-haspopup="dialog"
+                onClick={() => onOpenChange(!open)}
+                className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground cursor-pointer',
+                    open && 'bg-muted text-foreground',
+                )}
+            >
+                <Link2 className="h-4 w-4" />
+            </button>
+            {open ? (
+                <div
+                    role="dialog"
+                    aria-label="Sisipkan tautan"
+                    className="absolute left-0 top-full z-20 mt-1 w-72 rounded-lg border border-border bg-card p-3 shadow-lg"
+                >
+                    <form onSubmit={submit} className="space-y-2">
+                        <label htmlFor="rte-link-url" className="block text-xs font-medium">
+                            URL tautan
+                        </label>
+                        <input
+                            ref={inputRef}
+                            id="rte-link-url"
+                            type="url"
+                            value={url}
+                            onChange={(e) => setUrl(e.target.value)}
+                            placeholder="https://contoh.com"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Escape') {
+                                    e.preventDefault();
+                                    onOpenChange(false);
+                                }
+                            }}
+                            className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        />
+                        {!valid && trimmed ? (
+                            <p className="text-[11px] text-destructive">URL tidak valid. Gunakan http(s):// atau path relatif.</p>
+                        ) : null}
+                        <div className="flex justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={() => onOpenChange(false)}
+                                className="rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={!valid}
+                                className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Sisipkan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            ) : null}
         </div>
     );
 }

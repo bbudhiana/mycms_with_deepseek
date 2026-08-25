@@ -5,6 +5,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'sonner';
 import { AppLayout } from './layouts/AppLayout';
+import { initTheme } from './lib/theme';
 
 createInertiaApp({
     title: (title) => (title ? `${title} — MyNews` : 'MyNews'),
@@ -23,6 +24,7 @@ createInertiaApp({
     },
     setup({ el, App, props }: { el: HTMLElement | null; App: React.ComponentType<any>; props: any }) {
         if (!el) return;
+        initTheme();
         createRoot(el).render(
             <>
                 <App {...props} />

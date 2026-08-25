@@ -90,6 +90,7 @@ export default function SettingsProfile({ user }: Props) {
             title: 'Hapus foto profil',
             description: 'Foto profil Anda akan dihapus dan diganti dengan inisial nama.',
             confirmLabel: 'Hapus',
+            confirmVariant: 'destructive',
             onConfirm: () =>
                 photoForm.delete('/settings/profile-photo', {
                     preserveScroll: true,
