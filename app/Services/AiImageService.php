@@ -5,14 +5,21 @@ namespace App\Services;
 use App\Models\Media;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Support\Arr;
 use RuntimeException;
 
 class AiImageService
 {
+    /**
+     * Tell Unsplash (and anyone debugging outbound calls) which app is making
+     * the request. Demo apps without `Via` get 403'd; production apps without
+     * a real `User-Agent` are throttled or blocked. Keep both.
+     */
+    private const UNSPLASH_USER_AGENT = 'MyNews-CMS/1.0';
+
     /**
      * Ask the configured image provider for a suitable photo for the topic,
      * download it, and store it in the Media library. Returns null when image
@@ -30,6 +37,11 @@ class AiImageService
 
         if ($settings->image_provider === 'pexels') {
             $url = $this->pexelsSearch($query);
+        } elseif ($settings->image_provider === 'unsplash') {
+            $url = $this->unsplashSearch($query);
+            if ($url !== null) {
+                $this->trackUnsplashDownload($url);
+            }
         } else {
             $url = $this->customSearch($query);
         }
@@ -66,12 +78,99 @@ class AiImageService
         }
 
         $randomNumber = Arr::random([0, 1, 2, 3, 4, 5]);
-        
+
         $url = $response->json('photos.'.$randomNumber.'.src.large2x')
             ?? $response->json('photos.'.$randomNumber.'.src.original')
             ?? $response->json('photos.'.$randomNumber.'.src.medium');
 
         return is_string($url) ? $url : null;
+    }
+
+    private function unsplashSearch(string $query): ?string
+    {
+        $settings = app(AiProviderService::class)->settings();
+
+        if (! $settings || blank($settings->image_api_key)) {
+            throw new RuntimeException('Access key Unsplash belum dikonfigurasi.');
+        }
+
+        try {
+            /** @var Response $response */
+            $response = Http::connectTimeout(10)
+                ->timeout(30)
+                ->withHeaders($this->unsplashHeaders($settings->image_api_key))
+                ->acceptJson()
+                ->get('https://api.unsplash.com/search/photos', ['query' => $query, 'per_page' => 10, 'lang' => 'id']);
+        } catch (ConnectionException) {
+            throw new RuntimeException('Tidak dapat terhubung ke Unsplash API.');
+        }
+
+        if ($response->failed()) {
+            $error = $response->json('errors.0') ?? $response->body();
+            throw new RuntimeException('Unsplash error ('.$response->status().'): '.$error);
+        }
+
+        $results = $response->json('results');
+        if (! is_array($results) || $results === []) {
+            return null;
+        }
+
+        $pickIndex = Arr::random(range(0, count($results) - 1));
+        $photo = $results[$pickIndex];
+
+        return $photo['urls']['regular']
+            ?? $photo['urls']['small']
+            ?? $photo['urls']['full']
+            ?? null;
+    }
+
+    /**
+     * Headers Unsplash wajib/kuat:
+     * - `Accept-Version: v1` → tanpa ini Unsplash balas 426 atau tolak request
+     * - `Authorization: Client-ID <key>` → autentikasi public-action
+     * - `User-Agent` / `Via` → wajib untuk lolos rate-limit & anti-bot (tanpa ini 403)
+     *
+     * @return array<string, string>
+     */
+    private function unsplashHeaders(string $accessKey): array
+    {
+        return [
+            'Authorization' => 'Client-ID '.$accessKey,
+            'Accept-Version' => 'v1',
+            'User-Agent' => self::UNSPLASH_USER_AGENT,
+            'Via' => self::UNSPLASH_USER_AGENT,
+        ];
+    }
+
+    /**
+     * Trigger Unsplash's download-tracking endpoint. Required by their API
+     * guidelines: applications that download a photo must fire a GET to
+     * /photos/{id}/download so Unsplash can count it. Best-effort — image
+     * download should not fail if tracking fails.
+     */
+    private function trackUnsplashDownload(?string $imageUrl): void
+    {
+        if ($imageUrl === null || $imageUrl === '') {
+            return;
+        }
+
+        if (! preg_match('#unsplash\.com/photo-([A-Za-z0-9_-]+)#', $imageUrl, $matches)) {
+            return;
+        }
+
+        $settings = app(AiProviderService::class)->settings();
+        if (! $settings || blank($settings->image_api_key)) {
+            return;
+        }
+
+        try {
+            Http::connectTimeout(5)
+                ->timeout(15)
+                ->withHeaders($this->unsplashHeaders($settings->image_api_key))
+                ->get('https://api.unsplash.com/photos/'.$matches[1].'/download');
+        } catch (\Throwable) {
+            // Tracking is best-effort; never block the main flow.
+        }
     }
 
     private function customSearch(string $query): ?string

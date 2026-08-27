@@ -47,8 +47,8 @@ class AiSettingsController extends Controller
             unset($data['image_api_key']);
         }
 
-        if (($data['image_provider'] ?? 'custom') !== 'pexels') {
-            $data['image_api_key'] = null;
+        if (! in_array($data['image_provider'] ?? 'custom', ['pexels', 'unsplash'], true)) {
+            unset($data['image_api_key']);
         }
 
         if (($data['image_enabled'] ?? false) === false) {

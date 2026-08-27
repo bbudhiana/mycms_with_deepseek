@@ -7,6 +7,8 @@ use App\Enums\AiScheduleType;
 use App\Enums\AiTone;
 use App\Http\Requests\AiScheduleRequest;
 use App\Models\AiSchedule;
+use App\Models\Category;
+use App\Models\Tag;
 use App\Models\User;
 use App\Services\ActivityLogService;
 use App\Services\AiAutopilotService;
@@ -25,7 +27,7 @@ class AiScheduleController extends Controller
     {
         $schedules = AiSchedule::query()
             ->withCount('generatedContents')
-            ->with('author:id,name')
+            ->with(['author:id,name', 'category:id,name'])
             ->latest()
             ->get();
 
@@ -37,6 +39,8 @@ class AiScheduleController extends Controller
         return Inertia::render('Ai/Schedules', [
             'schedules' => $schedules,
             'authors' => $authors,
+            'categories' => Category::query()->orderBy('name')->get(['id', 'name']),
+            'tags' => Tag::query()->orderBy('name')->get(['id', 'name']),
             'options' => [
                 'types' => collect(AiScheduleType::cases())->map(fn ($t) => ['value' => $t->value, 'label' => $t->label()]),
                 'tones' => collect(AiTone::cases())->map(fn ($t) => ['value' => $t->value, 'label' => $t->label()]),
@@ -95,6 +99,8 @@ class AiScheduleController extends Controller
         $data['is_active'] = $data['is_active'] ?? false;
         $data['auto_publish'] = $data['auto_publish'] ?? false;
         $data['author_id'] = $data['author_id'] ?? null;
+        $data['category_id'] = $data['category_id'] ?? null;
+        $data['tags'] = isset($data['tags']) && is_array($data['tags']) ? array_values(array_unique($data['tags'])) : [];
 
         if (($data['type'] ?? 'daily') !== 'weekly') {
             $data['day_of_week'] = null;

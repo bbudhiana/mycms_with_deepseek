@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
-import { CalendarClock, Play, Plus, Pencil, Trash2, FileText } from 'lucide-react';
+import { CalendarClock, Play, Plus, Pencil, Trash2, FileText, Tag as TagIcon, X } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ConfirmDialog, useConfirmDialog } from '@/components/confirm-dialog';
 import { formatDate } from '@/components/status-badge';
+import { cn } from '@/lib/utils';
 
 interface Schedule {
     id: number;
@@ -32,6 +33,9 @@ interface Schedule {
     generated_contents_count: number;
     author: { id: number; name: string } | null;
     author_id: number | null;
+    category_id: number | null;
+    category?: { id: number; name: string } | null;
+    tags?: number[];
 }
 
 interface Option {
@@ -40,6 +44,11 @@ interface Option {
 }
 
 interface Author {
+    id: number;
+    name: string;
+}
+
+interface TaxonomyItem {
     id: number;
     name: string;
 }
@@ -61,6 +70,8 @@ const emptyForm = {
     day_of_week: null as number | null,
     tone: 'editorial',
     topic_direction: '',
+    category_id: null as number | null,
+    tags: [] as number[],
     language: 'id',
     publish_time: '08:00',
     content_count: 1,
@@ -70,16 +81,24 @@ const emptyForm = {
 export default function AiSchedulesPage({
     schedules,
     authors,
+    categories,
+    tags,
     options,
 }: {
     schedules: Schedule[];
     authors: Author[];
+    categories: TaxonomyItem[];
+    tags: TaxonomyItem[];
     options: { types: Option[]; tones: Option[] };
 }) {
     const { confirm, dialog } = useConfirmDialog();
     const [editing, setEditing] = React.useState<Schedule | null>(null);
     const [open, setOpen] = React.useState(false);
     const { data, setData, post, patch, errors, processing, reset } = useForm(emptyForm);
+
+    const toggleTag = (id: number) => {
+        setData('tags', data.tags.includes(id) ? data.tags.filter((t) => t !== id) : [...data.tags, id]);
+    };
 
     const openCreate = () => {
         setEditing(null);
@@ -98,6 +117,8 @@ export default function AiSchedulesPage({
             day_of_week: s.day_of_week,
             tone: s.tone,
             topic_direction: s.topic_direction,
+            category_id: s.category_id,
+            tags: s.tags ?? [],
             language: s.language,
             publish_time: s.publish_time,
             content_count: s.content_count,
@@ -156,48 +177,69 @@ export default function AiSchedulesPage({
                 />
             ) : (
                 <div className="space-y-3">
-                    {schedules.map((s) => (
-                        <div key={s.id} className="rounded-xl border border-border bg-card p-5 shadow-sm">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="min-w-0">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <h3 className="font-display text-base font-semibold">{s.name}</h3>
-                                        <Badge tone={statusTone[s.status] ?? 'default'}>
-                                            {s.status === 'idle' && 'Idle'}
-                                            {s.status === 'running' && 'Sedang Berjalan'}
-                                            {s.status === 'ok' && 'Berhasil'}
-                                            {s.status === 'failed' && 'Gagal'}
-                                        </Badge>
-                                        {!s.is_active && <Badge tone="default">Nonaktif</Badge>}
+                    {schedules.map((s) => {
+                        const scheduleTags = (s.tags ?? [])
+                            .map((id) => tags.find((t) => t.id === id)?.name)
+                            .filter((name): name is string => Boolean(name));
+
+                        return (
+                            <div key={s.id} className="rounded-xl border border-border bg-card p-5 shadow-sm">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <h3 className="font-display text-base font-semibold">{s.name}</h3>
+                                            <Badge tone={statusTone[s.status] ?? 'default'}>
+                                                {s.status === 'idle' && 'Idle'}
+                                                {s.status === 'running' && 'Sedang Berjalan'}
+                                                {s.status === 'ok' && 'Berhasil'}
+                                                {s.status === 'failed' && 'Gagal'}
+                                            </Badge>
+                                            {!s.is_active && <Badge tone="default">Nonaktif</Badge>}
+                                        </div>
+                                        <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">{s.topic_direction}</p>
+                                        <p className="mt-2 text-xs text-muted-foreground">
+                                            {s.type === 'weekly' && s.day_of_week
+                                                ? `Mingguan · ${dayNames[s.day_of_week - 1]} · `
+                                                : 'Harian · '}
+                                            {s.publish_time} WIB · Nada {s.tone} · {s.language} · {s.content_count}{' '}
+                                            konten/siklus · {s.auto_publish ? 'auto-terbit' : 'draft'}
+                                            {s.author ? ` · Pemilik: ${s.author.name}` : ''}
+                                            {s.last_run_at ? ` · Terakhir: ${formatDate(s.last_run_at)}` : ''}
+                                        </p>
+                                        {(s.category || scheduleTags.length > 0) && (
+                                            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                                                <span className="text-muted-foreground">Target:</span>
+                                                {s.category && (
+                                                    <Badge tone="primary" className="font-normal">
+                                                        {s.category.name}
+                                                    </Badge>
+                                                )}
+                                                {scheduleTags.map((name) => (
+                                                    <Badge key={name} tone="default" className="font-normal">
+                                                        {name}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {s.last_error && (
+                                            <p className="mt-1 text-xs text-destructive">{s.last_error}</p>
+                                        )}
                                     </div>
-                                    <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">{s.topic_direction}</p>
-                                    <p className="mt-2 text-xs text-muted-foreground">
-                                        {s.type === 'weekly' && s.day_of_week
-                                            ? `Mingguan · ${dayNames[s.day_of_week - 1]} · `
-                                            : 'Harian · '}
-                                        {s.publish_time} WIB · Nada {s.tone} · {s.language} · {s.content_count}{' '}
-                                        konten/siklus · {s.auto_publish ? 'auto-terbit' : 'draft'}
-                                        {s.author ? ` · Pemilik: ${s.author.name}` : ''}
-                                        {s.last_run_at ? ` · Terakhir: ${formatDate(s.last_run_at)}` : ''}
-                                    </p>
-                                    {s.last_error && (
-                                        <p className="mt-1 text-xs text-destructive">{s.last_error}</p>
-                                    )}
-                                </div>
-                                <div className="flex shrink-0 items-center gap-2">
-                                    <Button size="sm" variant="outline" onClick={() => runNow(s)} disabled={s.status === 'running'}>
-                                        <Play className="h-4 w-4" /> Jalankan Sekarang
-                                    </Button>
-                                    <Button size="sm" variant="ghost" onClick={() => openEdit(s)}>
-                                        <Pencil className="h-4 w-4" /> Ubah
-                                    </Button>
-                                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => confirmDelete(s)}>
-                                        <Trash2 className="h-4 w-4" /> Hapus
-                                    </Button>
+                                    <div className="flex shrink-0 items-center gap-2">
+                                        <Button size="sm" variant="outline" onClick={() => runNow(s)} disabled={s.status === 'running'}>
+                                            <Play className="h-4 w-4" /> Jalankan Sekarang
+                                        </Button>
+                                        <Button size="sm" variant="ghost" onClick={() => openEdit(s)}>
+                                            <Pencil className="h-4 w-4" /> Ubah
+                                        </Button>
+                                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => confirmDelete(s)}>
+                                            <Trash2 className="h-4 w-4" /> Hapus
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
@@ -354,6 +396,93 @@ export default function AiSchedulesPage({
                                 placeholder="Petunjuk arah yang Anda berikan ke AI sebagai latar belakang tiap artikel."
                             />
                             <FieldError error={errors.topic_direction} />
+                        </div>
+
+                        <div className="space-y-4 border-t border-border pt-4">
+                            <div>
+                                <h3 className="text-sm font-semibold">Target Konten</h3>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                    Kategori dan tag yang dipakai otomatis untuk setiap artikel dari jadwal ini. Boleh
+                                    kosong — AI lewati bila tidak dipilih.
+                                </p>
+                            </div>
+
+                            <div>
+                                <Label>Kategori Default</Label>
+                                <Select
+                                    value={data.category_id?.toString() ?? ''}
+                                    onValueChange={(v) => setData('category_id', v === '' ? null : parseInt(v))}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Tanpa kategori default" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">Tanpa kategori</SelectItem>
+                                        {categories.map((c) => (
+                                            <SelectItem key={c.id} value={c.id.toString()}>
+                                                {c.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FieldError error={errors.category_id} />
+                            </div>
+
+                            <div>
+                                <div className="mb-1.5 flex items-center justify-between">
+                                    <Label htmlFor="schedule-tags">Tag Otomatis</Label>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-muted-foreground">
+                                            {data.tags.length} dipilih
+                                        </span>
+                                        {data.tags.length > 0 && (
+                                            <Button
+                                                id="schedule-tags"
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setData('tags', [])}
+                                                className="h-7 px-2 text-xs"
+                                            >
+                                                <X className="h-3 w-3" /> Bersihkan
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                                {tags.length === 0 ? (
+                                    <p className="rounded-md border border-dashed border-input bg-muted/30 px-3 py-4 text-center text-xs text-muted-foreground">
+                                        Belum ada tag. Tambahkan tag di menu Tag terlebih dahulu.
+                                    </p>
+                                ) : (
+                                    <div
+                                        role="group"
+                                        aria-labelledby="schedule-tags"
+                                        className="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-md border border-input bg-card p-2"
+                                    >
+                                        {tags.map((tag) => {
+                                            const on = data.tags.includes(tag.id);
+                                            return (
+                                                <button
+                                                    key={tag.id}
+                                                    type="button"
+                                                    onClick={() => toggleTag(tag.id)}
+                                                    aria-pressed={on}
+                                                    className={cn(
+                                                        'inline-flex min-h-[44px] items-center justify-center rounded-full border px-3 py-1.5 text-xs transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                                        on
+                                                            ? 'border-primary bg-primary text-primary-foreground hover:bg-primary/90'
+                                                            : 'border-input bg-card text-foreground hover:border-primary/40 hover:bg-muted',
+                                                    )}
+                                                >
+                                                    {on && <TagIcon className="mr-1 h-3 w-3" aria-hidden />}
+                                                    {tag.name}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                <FieldError error={errors.tags} />
+                            </div>
                         </div>
 
                         <div className="flex items-center justify-between rounded-lg border border-border p-3">

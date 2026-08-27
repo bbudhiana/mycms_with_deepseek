@@ -3,6 +3,8 @@
 use App\Enums\AiScheduleStatus;
 use App\Enums\AiScheduleType;
 use App\Models\AiSchedule;
+use App\Models\Category;
+use App\Models\Tag;
 
 it('lists schedules for super admin', function () {
     actingAsRole('super_admin');
@@ -23,8 +25,10 @@ it('forbids non-super-admin from managing schedules', function () {
     $this->post(route('ai.schedules.store'), [])->assertForbidden();
 });
 
-it('creates a daily schedule', function () {
+it('creates a daily schedule with category and multiple tags', function () {
     actingAsRole('super_admin');
+    $category = Category::factory()->create();
+    $tags = Tag::factory()->count(2)->create();
 
     $this->post(route('ai.schedules.store'), [
         'name' => 'Otomasi Teknologi',
@@ -32,6 +36,8 @@ it('creates a daily schedule', function () {
         'type' => 'daily',
         'tone' => 'teknis',
         'topic_direction' => 'Tulis tentang tren teknologi terbaru di Indonesia',
+        'category_id' => $category->id,
+        'tags' => $tags->pluck('id')->all(),
         'language' => 'id',
         'publish_time' => '09:30',
         'content_count' => 2,
@@ -44,7 +50,9 @@ it('creates a daily schedule', function () {
         ->and($schedule->content_count)->toBe(2)
         ->and($schedule->auto_publish)->toBeTrue()
         ->and($schedule->status)->toBe(AiScheduleStatus::Idle)
-        ->and($schedule->day_of_week)->toBeNull();
+        ->and($schedule->day_of_week)->toBeNull()
+        ->and($schedule->category_id)->toBe($category->id)
+        ->and($schedule->tags)->toBe($tags->pluck('id')->all());
 });
 
 it('stores the selected author on a schedule', function () {
@@ -102,6 +110,8 @@ it('validates schedule fields', function () {
 it('updates a schedule', function () {
     actingAsRole('super_admin');
 
+    $category = Category::factory()->create();
+    $tag = Tag::factory()->create();
     $schedule = AiSchedule::factory()->create(['name' => 'Lama', 'content_count' => 1]);
 
     $this->patch(route('ai.schedules.update', $schedule), [
@@ -110,6 +120,8 @@ it('updates a schedule', function () {
         'type' => 'daily',
         'tone' => 'santai',
         'topic_direction' => 'Arah baru',
+        'category_id' => $category->id,
+        'tags' => [$tag->id],
         'language' => 'en',
         'publish_time' => '10:00',
         'content_count' => 3,
@@ -119,7 +131,9 @@ it('updates a schedule', function () {
     $schedule->refresh();
     expect($schedule->name)->toBe('Baru')
         ->and($schedule->is_active)->toBeFalse()
-        ->and($schedule->language)->toBe('en');
+        ->and($schedule->language)->toBe('en')
+        ->and($schedule->category_id)->toBe($category->id)
+        ->and($schedule->tags)->toBe([$tag->id]);
 });
 
 it('deletes a schedule', function () {

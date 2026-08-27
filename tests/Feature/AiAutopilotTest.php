@@ -4,13 +4,15 @@ use App\Models\AiProviderSetting;
 use App\Models\AiSchedule;
 use App\Models\Category;
 use App\Models\Content;
+use App\Models\Tag;
 use App\Models\User;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Support\Facades\Http;
 
 function fakeChatCompletion(string $jsonBody): void
 {
     Http::fake([
-        '*/chat/completions' => Http::response([
+        '*chat/completions*' => Http::response([
             'choices' => [['message' => ['content' => $jsonBody]]],
         ], 200),
     ]);
@@ -33,6 +35,10 @@ function articleJson(
 beforeEach(function () {
     $this->user = userWithRole('super_admin');
     $this->actingAs($this->user);
+
+    $factory = app(Factory::class);
+    $property = (new ReflectionClass($factory))->getProperty('stubCallbacks');
+    $property->setValue($factory, collect());
 
     $this->settings = AiProviderSetting::factory()->create([
         'base_url' => 'https://ai.example.com/v1',
@@ -77,44 +83,54 @@ it('runNow ignores the triggering user and uses the schedule author', function (
     expect(Content::first()->author_id)->toBe($author->id);
 });
 
-it('sets category to Teknologi by default when direction has no Kategori', function () {
-    $this->schedule->update(['topic_direction' => 'Tulis artikel tentang tren AI 2026.']);
+it('uses the schedule category when set', function () {
+    $category = Category::factory()->create(['name' => 'Nasional']);
+    $this->schedule->update(['category_id' => $category->id]);
     fakeChatCompletion(articleJson());
 
     $this->artisan('ai:autopilot')->assertSuccessful();
 
-    $content = Content::first();
-    expect(Category::find($content->category_id)->name)->toBe('Teknologi');
+    expect(Content::first()->category_id)->toBe($category->id);
 });
 
-it('uses the category mentioned in Arah Topik', function () {
-    $this->schedule->update(['topic_direction' => "Liputan peristiwa politik.\nKategori : 'Nasional'"]);
+it('leaves category_id null when the schedule has no category', function () {
     fakeChatCompletion(articleJson());
 
     $this->artisan('ai:autopilot')->assertSuccessful();
 
-    $content = Content::first();
-    expect(Category::find($content->category_id)->name)->toBe('Nasional');
+    expect(Content::first()->category_id)->toBeNull();
 });
 
-it('sets tag to Edukasi by default when direction has no Tag', function () {
-    $this->schedule->update(['topic_direction' => 'Liputan umum tentang AI.']);
+it('syncs schedule tags to generated content', function () {
+    $tags = Tag::factory()->count(2)->create();
+    $this->schedule->update(['tags' => $tags->pluck('id')->all()]);
     fakeChatCompletion(articleJson());
 
     $this->artisan('ai:autopilot')->assertSuccessful();
 
-    $content = Content::first();
-    expect($content->tags()->pluck('name')->all())->toBe(['Edukasi']);
+    expect(Content::first()->tags()->pluck('id')->sort()->values()->all())
+        ->toBe($tags->pluck('id')->sort()->values()->all());
 });
 
-it('uses the tag mentioned in Arah Topik', function () {
-    $this->schedule->update(['topic_direction' => "Resensi film terbaru.\nTag: 'Hiburan'"]);
+it('leaves content tags empty when schedule has no tags', function () {
     fakeChatCompletion(articleJson());
 
     $this->artisan('ai:autopilot')->assertSuccessful();
 
+    expect(Content::first()->tags()->count())->toBe(0);
+});
+
+it('does not interpret Kategori/Tag markers inside Arah Topik anymore', function () {
+    $this->schedule->update(['topic_direction' => "Liputan peristiwa politik.\nKategori : 'Nasional'\nTag: 'Hiburan'"]);
+    fakeChatCompletion(articleJson());
+
+    $this->artisan('ai:autopilot')->assertSuccessful();
+
+    // Tidak ada fallback Kategori/Teknologi atau Tag/Edukasi — kategori & tag
+    // murni mengikuti kolom schedule.category_id dan schedule.tags.
     $content = Content::first();
-    expect($content->tags()->pluck('name')->all())->toBe(['Hiburan']);
+    expect($content->category_id)->toBeNull();
+    expect($content->tags()->count())->toBe(0);
 });
 
 it('sets sub_title from AI response and rejects identical-to-title value', function () {
@@ -145,21 +161,21 @@ it('reads breaking_news_flag and editor_pick_flag from AI', function () {
     expect($content->editor_pick_flag)->toBeTrue();
 });
 
-it('uses first sentence of excerpt as image caption and matches featured/thumbnail to same media', function () {
+it('prepends (Ilustrasi) to image caption and matches featured/thumbnail to same media', function () {
     $this->settings->update(['image_enabled' => true, 'image_provider' => 'custom', 'image_endpoint_url' => 'https://img.example.com/search']);
 
     Http::fake([
-        '*/chat/completions' => Http::response([
+        '*ai.example.com/*' => Http::response([
             'choices' => [['message' => [
                 'content' => articleJson('Caption Test', [
                     'excerpt' => 'Kalimat pembuka untuk caption. Kalimat kedua diabaikan.',
                 ]),
             ]]],
         ], 200),
-        'img.example.com/search*' => Http::response([
+        '*img.example.com/search*' => Http::response([
             'results' => [['url' => 'https://img.example.com/photo.jpg']],
         ], 200),
-        'img.example.com/photo.jpg' => Http::response('jpeg-bytes', 200, [
+        '*img.example.com/photo.jpg' => Http::response('jpeg-bytes', 200, [
             'Content-Type' => 'image/jpeg',
         ]),
     ]);
@@ -167,26 +183,71 @@ it('uses first sentence of excerpt as image caption and matches featured/thumbna
     $this->artisan('ai:autopilot')->assertSuccessful();
 
     $content = Content::first();
-    expect($content->image_caption)->toBe('Kalimat pembuka untuk caption.');
+    expect($content->image_caption)->toBe('(Ilustrasi) Kalimat pembuka untuk caption.');
     expect($content->image_credit)->toBe('Custom Image Source');
     expect($content->featured_image_id)->not->toBeNull();
     expect($content->thumbnail_id)->toBe($content->featured_image_id);
 });
 
-it('uses Pexels as image credit when image provider is pexels', function () {
-    $this->settings->update(['image_enabled' => true, 'image_provider' => 'pexels', 'image_api_key' => 'px-key']);
+it('maps image_provider unsplash to image_credit "Unsplash"', function () {
+    $this->settings->update(['image_enabled' => true, 'image_provider' => 'unsplash', 'image_api_key' => 'unsplash-key']);
 
     Http::fake([
-        '*/chat/completions' => Http::response([
-            'choices' => [['message' => ['content' => articleJson('Pexels Test')]]],
+        '*ai.example.com/*' => Http::response([
+            'choices' => [['message' => ['content' => articleJson('Unsplash Credit')]]],
         ], 200),
-        'api.pexels.com/*' => Http::response([
-            'photos' => [['src' => ['large2x' => 'https://images.pexels.com/photo.jpg']]],
+        '*api.unsplash.com/search/photos*' => Http::response([
+            'total' => 5,
+            'results' => [[
+                'id' => 'abc123def',
+                'urls' => [
+                    'regular' => 'https://images.unsplash.com/photo-1416339306562-f3d12fefd36f?w=1080',
+                ],
+            ]],
         ], 200),
-        'images.pexels.com/*' => Http::response('jpeg-bytes', 200, ['Content-Type' => 'image/jpeg']),
+        '*api.unsplash.com/photos/abc123def/download*' => Http::response([
+            'url' => 'https://images.unsplash.com/photo-1416339306562-f3d12fefd36f',
+        ], 200),
+        '*images.unsplash.com/photo-1416339306562-f3d12fefd36f*' => Http::response('jpeg-bytes', 200, [
+            'Content-Type' => 'image/jpeg',
+        ]),
     ]);
 
     $this->artisan('ai:autopilot')->assertSuccessful();
 
-    expect(Content::first()->image_credit)->toBe('Pexels');
+    Http::assertSent(function ($request) {
+        // Accept-Version + User-Agent wajib supaya Unsplash tidak 403/426.
+        return str_starts_with($request->url(), 'https://api.unsplash.com/search/photos')
+            && $request->hasHeader('Accept-Version', 'v1')
+            && str_starts_with($request->header('Authorization')[0] ?? '', 'Client-ID ')
+            && $request->hasHeader('User-Agent')
+            && $request->hasHeader('Via');
+    });
+
+    $content = Content::first();
+    expect($content->image_credit)->toBe('Unsplash');
+    expect($content->featured_image_id)->not->toBeNull();
+    expect($content->thumbnail_id)->toBe($content->featured_image_id);
+});
+
+it('surfaces the unsplash error on the schedule when the key is invalid', function () {
+    $this->settings->update(['image_enabled' => true, 'image_provider' => 'unsplash', 'image_api_key' => 'bad-key']);
+
+    Http::fake([
+        '*ai.example.com/*' => Http::response([
+            'choices' => [['message' => ['content' => articleJson('Unsplash Error')]]],
+        ], 200),
+        '*api.unsplash.com/*' => Http::response([
+            'errors' => ['OAuth error: The access token is invalid'],
+        ], 401),
+    ]);
+
+    $this->artisan('ai:autopilot')->assertSuccessful();
+
+    $content = Content::first();
+    expect($content)->not->toBeNull();
+    expect($content->image_credit)->toBeNull();
+    expect($content->featured_image_id)->toBeNull();
+    expect($this->schedule->fresh()->last_error)->toContain('Unsplash error (401)')
+        ->toContain('access token is invalid');
 });

@@ -24,6 +24,8 @@ class AiScheduleFactory extends Factory
             'type' => AiScheduleType::Daily,
             'tone' => AiTone::Editorial,
             'topic_direction' => fake()->sentence(),
+            'category_id' => null,
+            'tags' => [],
             'language' => 'id',
             'publish_time' => '08:00',
             'day_of_week' => null,

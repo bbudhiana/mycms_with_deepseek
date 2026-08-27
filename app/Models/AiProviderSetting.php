@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $max_tokens
  * @property string|null $image_endpoint_url
  * @property bool $image_enabled
- * @property string $image_provider
+ * @property string $image_provider custom|pexels|unsplash
  * @property string|null $image_api_key
  */
 class AiProviderSetting extends Model

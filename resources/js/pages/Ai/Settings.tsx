@@ -169,19 +169,22 @@ export default function AiSettingsPage({ settings }: { settings: AiSettings | nu
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="pexels">Pexels</SelectItem>
+                                        <SelectItem value="unsplash">Unsplash</SelectItem>
                                         <SelectItem value="custom">Endpoint Kustom</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <p className="mt-1 text-xs text-muted-foreground">
-                                    Pexels: gunakan API key untuk mencari foto sesuai topik. Endpoint Kustom:
-                                    pakai URL API pencarian gambar Anda sendiri.
+                                    Pexels & Unsplash: gunakan API key untuk mencari foto sesuai topik.
+                                    Endpoint Kustom: pakai URL API pencarian gambar Anda sendiri.
                                 </p>
                                 <FieldError error={errors.image_provider} />
                             </div>
 
-                            {data.image_provider === 'pexels' ? (
+                            {data.image_provider === 'pexels' || data.image_provider === 'unsplash' ? (
                                 <div>
-                                    <Label htmlFor="image_api_key">Pexels API Key</Label>
+                                    <Label htmlFor="image_api_key">
+                                        {data.image_provider === 'unsplash' ? 'Unsplash Access Key' : 'Pexels API Key'}
+                                    </Label>
                                     <Input
                                         id="image_api_key"
                                         type="password"
@@ -190,11 +193,14 @@ export default function AiSettingsPage({ settings }: { settings: AiSettings | nu
                                         placeholder={
                                             settings?.has_image_api_key
                                                 ? '•••••••• (biarkan kosong untuk mempertahankan)'
-                                                : 'Paste API key dari pexels.com/api'
+                                                : data.image_provider === 'unsplash'
+                                                    ? 'Paste Access Key dari unsplash.com/developers'
+                                                    : 'Paste API key dari pexels.com/api'
                                         }
                                     />
                                     <p className="mt-1 text-xs text-muted-foreground">
-                                        Key disimpan terenkripsi di database.
+                                        Key disimpan terenkripsi di database. Pakai Unsplash jika ingin
+                                        variasi foto lebih beragam dari fotografer independen.
                                     </p>
                                     <FieldError error={errors.image_api_key} />
                                 </div>

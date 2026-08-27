@@ -28,9 +28,9 @@ class AiSettingsRequest extends FormRequest
             'temperature' => ['required', 'numeric', 'min:0', 'max:2'],
             'max_tokens' => ['required', 'integer', 'min:1', 'max:131072'],
             'image_enabled' => ['sometimes', 'boolean'],
-            'image_provider' => ['sometimes', Rule::in(['custom', 'pexels'])],
+            'image_provider' => ['sometimes', Rule::in(['custom', 'pexels', 'unsplash'])],
             'image_api_key' => [
-                $imageEnabled && $imageProvider === 'pexels' ? 'required' : 'nullable',
+                $imageEnabled && in_array($imageProvider, ['pexels', 'unsplash'], true) ? 'required' : 'nullable',
                 'string',
                 'max:500',
             ],

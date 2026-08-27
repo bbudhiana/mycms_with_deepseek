@@ -27,6 +27,8 @@ use Illuminate\Support\Carbon;
  * @property AiScheduleStatus $status
  * @property Carbon|null $last_run_at
  * @property string|null $last_error
+ * @property int|null $category_id
+ * @property array<int>|null $tags
  */
 class AiSchedule extends Model
 {
@@ -39,6 +41,8 @@ class AiSchedule extends Model
         'type',
         'tone',
         'topic_direction',
+        'category_id',
+        'tags',
         'language',
         'publish_time',
         'day_of_week',
@@ -58,6 +62,7 @@ class AiSchedule extends Model
             'tone' => AiTone::class,
             'status' => AiScheduleStatus::class,
             'last_run_at' => 'datetime',
+            'tags' => 'array',
         ];
     }
 
@@ -69,5 +74,10 @@ class AiSchedule extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'author_id');
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
     }
 }

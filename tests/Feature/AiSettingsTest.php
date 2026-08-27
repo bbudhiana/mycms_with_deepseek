@@ -111,6 +111,45 @@ it('stores the pexels api key encrypted', function () {
     expect($raw)->not->toContain('pexels-top-secret');
 });
 
+it('requires the unsplash access key when the unsplash provider is selected', function () {
+    actingAsRole('super_admin');
+
+    $this->put(route('ai.settings.update'), [
+        'base_url' => 'https://api.example.com/v1',
+        'model' => 'gpt-4o-mini',
+        'provider' => 'openai-compatible',
+        'temperature' => 0.7,
+        'max_tokens' => 8192,
+        'image_enabled' => true,
+        'image_provider' => 'unsplash',
+        'image_api_key' => '',
+        'image_endpoint_url' => '',
+    ])->assertSessionHasErrors(['image_api_key']);
+});
+
+it('stores the unsplash access key encrypted', function () {
+    actingAsRole('super_admin');
+
+    $this->put(route('ai.settings.update'), [
+        'base_url' => 'https://api.example.com/v1',
+        'model' => 'gpt-4o-mini',
+        'provider' => 'openai-compatible',
+        'temperature' => 0.7,
+        'max_tokens' => 8192,
+        'image_enabled' => true,
+        'image_provider' => 'unsplash',
+        'image_api_key' => 'unsplash-access-key',
+        'image_endpoint_url' => '',
+    ])->assertRedirect();
+
+    $settings = AiProviderSetting::first();
+    expect($settings->image_provider)->toBe('unsplash')
+        ->and($settings->image_api_key)->toBe('unsplash-access-key');
+
+    $raw = DB::table('ai_provider_settings')->value('image_api_key');
+    expect($raw)->not->toContain('unsplash-access-key');
+});
+
 it('validates required settings fields', function () {
     actingAsRole('super_admin');
 
