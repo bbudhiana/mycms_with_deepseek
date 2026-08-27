@@ -4,6 +4,7 @@ use App\Enums\ContentStatus;
 use App\Models\ActivityLog;
 use App\Models\Category;
 use App\Models\Content;
+use Illuminate\Support\Carbon;
 
 it('lets an author create a draft', function () {
     actingAsRole('author');
@@ -133,4 +134,58 @@ it('lets an editor open a content submitted for review', function () {
         ->get('/contents/'.$content->id)
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('Contents/Editor'));
+});
+
+it('allows a partial update (autosave) with only the body field', function () {
+    $author = userWithRole('author');
+    $content = Content::factory()->draft()->create(['author_id' => $author->id, 'title' => 'Tetap', 'body' => '<p>lama</p>']);
+
+    $this->actingAs($author)
+        ->patch('/contents/'.$content->id, ['body' => '<p>baru hasil autosave</p>'])
+        ->assertRedirect();
+
+    $content->refresh();
+    expect($content->body)->toContain('baru hasil autosave')
+        ->and($content->title)->toBe('Tetap');
+});
+
+it('autosave endpoint persists body without setting flash toast', function () {
+    $author = userWithRole('author');
+    $content = Content::factory()->draft()->create(['author_id' => $author->id, 'body' => '<p>lama</p>']);
+
+    $this->actingAs($author)
+        ->patch('/contents/'.$content->id.'/autosave', ['body' => '<p>revisi diam-diam</p>'])
+        ->assertNoContent();
+
+    expect(session('success'))->toBeNull()
+        ->and(session('inertia.flash_data'))->toBeNull();
+
+    $content->refresh();
+    expect($content->body)->toContain('revisi diam-diam');
+});
+
+it('autosave skips no-op updates when body is unchanged', function () {
+    Carbon::setTestNow('2026-01-01 12:00:00');
+    $author = userWithRole('author');
+    $content = Content::factory()->draft()->create(['author_id' => $author->id, 'body' => '<p>sama</p>']);
+    $touched = $content->fresh()->updated_at;
+
+    Carbon::setTestNow('2026-01-01 12:00:05');
+
+    $this->actingAs($author)
+        ->patch('/contents/'.$content->id.'/autosave', ['body' => '<p>sama</p>'])
+        ->assertNoContent();
+
+    expect($content->fresh()->updated_at->equalTo($touched))->toBeTrue();
+    Carbon::setTestNow();
+});
+
+it('autosave rejects forbidden users', function () {
+    $author = userWithRole('author');
+    $other = userWithRole('author');
+    $content = Content::factory()->draft()->create(['author_id' => $other->id]);
+
+    $this->actingAs($author)
+        ->patch('/contents/'.$content->id.'/autosave', ['body' => '<p>coba</p>'])
+        ->assertForbidden();
 });

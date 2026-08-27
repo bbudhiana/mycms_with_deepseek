@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\AiHistoryController;
+use App\Http\Controllers\AiScheduleController;
+use App\Http\Controllers\AiSettingsController;
 use App\Http\Controllers\ApiDocsController;
 use App\Http\Controllers\CategoryManagementController;
 use App\Http\Controllers\ContentController;
@@ -26,6 +29,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/contents', [ContentController::class, 'store'])->name('contents.store');
     Route::get('/contents/{content}', [ContentController::class, 'edit'])->name('contents.edit');
     Route::patch('/contents/{content}', [ContentController::class, 'update'])->name('contents.update');
+    Route::patch('/contents/{content}/autosave', [ContentController::class, 'autosave'])->name('contents.autosave');
     Route::delete('/contents/{content}', [ContentController::class, 'destroy'])->name('contents.destroy');
 
     Route::post('/contents/{content}/submit', [ContentWorkflowController::class, 'submit'])->name('contents.submit');
@@ -82,4 +86,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/settings/profile-photo', [SettingsController::class, 'destroyProfilePhoto'])->name('settings.profile-photo.destroy');
 
     Route::get('/api-docs', ApiDocsController::class)->name('api-docs.index');
+
+    Route::middleware('role:super_admin')->prefix('ai')->name('ai.')->group(function () {
+        Route::get('/settings', [AiSettingsController::class, 'index'])->name('settings');
+        Route::put('/settings', [AiSettingsController::class, 'update'])->name('settings.update');
+
+        Route::get('/schedules', [AiScheduleController::class, 'index'])->name('schedules');
+        Route::post('/schedules', [AiScheduleController::class, 'store'])->name('schedules.store');
+        Route::patch('/schedules/{schedule}', [AiScheduleController::class, 'update'])->name('schedules.update');
+        Route::delete('/schedules/{schedule}', [AiScheduleController::class, 'destroy'])->name('schedules.destroy');
+        Route::post('/schedules/{schedule}/run', [AiScheduleController::class, 'runNow'])->name('schedules.run');
+
+        Route::get('/history', [AiHistoryController::class, 'index'])->name('history');
+    });
 });

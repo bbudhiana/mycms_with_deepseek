@@ -48,7 +48,7 @@ it('lets a super admin create a role with permissions', function () {
     $this->post('/roles', [
         'name' => 'Reporter',
         'permissions' => ['login', 'create_content', 'edit_own_content'],
-    ])->assertRedirect()->assertSessionHas('success');
+    ])->assertRedirect()->assertSessionHas('inertia.flash_data.success');
 
     $role = Role::where('name', 'reporter')->first();
     expect($role)->not->toBeNull();
@@ -151,7 +151,7 @@ it('lets a super admin delete an unused role and logs the deletion', function ()
 
     $role = Role::create(['name' => 'ghost']);
 
-    $this->delete('/roles/'.$role->id)->assertRedirect()->assertSessionHas('success');
+    $this->delete('/roles/'.$role->id)->assertRedirect()->assertSessionHas('inertia.flash_data.success');
 
     expect(Role::find($role->id))->toBeNull();
     expect(ActivityLog::where('action', 'role.deleted')->exists())->toBeTrue();

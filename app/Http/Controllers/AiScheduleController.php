@@ -1,0 +1,105 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Enums\AiScheduleStatus;
+use App\Enums\AiScheduleType;
+use App\Enums\AiTone;
+use App\Http\Requests\AiScheduleRequest;
+use App\Models\AiSchedule;
+use App\Models\User;
+use App\Services\ActivityLogService;
+use App\Services\AiAutopilotService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Redirect;
+use Inertia\Inertia;
+
+class AiScheduleController extends Controller
+{
+    public function __construct(
+        private readonly AiAutopilotService $autopilot,
+        private readonly ActivityLogService $activityLog,
+    ) {}
+
+    public function index()
+    {
+        $schedules = AiSchedule::query()
+            ->withCount('generatedContents')
+            ->with('author:id,name')
+            ->latest()
+            ->get();
+
+        $authors = User::query()
+            ->role('author')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return Inertia::render('Ai/Schedules', [
+            'schedules' => $schedules,
+            'authors' => $authors,
+            'options' => [
+                'types' => collect(AiScheduleType::cases())->map(fn ($t) => ['value' => $t->value, 'label' => $t->label()]),
+                'tones' => collect(AiTone::cases())->map(fn ($t) => ['value' => $t->value, 'label' => $t->label()]),
+            ],
+        ]);
+    }
+
+    public function store(AiScheduleRequest $request)
+    {
+        $data = $this->normalize($request->validated());
+
+        $schedule = AiSchedule::create([...$data, 'status' => AiScheduleStatus::Idle]);
+
+        $this->activityLog->log('ai.schedule.created', $schedule, "Membuat jadwal autopilot '{$schedule->name}'.");
+
+        return Redirect::back()->with('success', 'Jadwal berhasil dibuat.');
+    }
+
+    public function update(AiScheduleRequest $request, AiSchedule $schedule)
+    {
+        $schedule->update($this->normalize($request->validated()));
+
+        $this->activityLog->log('ai.schedule.updated', $schedule, "Memperbarui jadwal autopilot '{$schedule->name}'.");
+
+        return Redirect::back()->with('success', 'Jadwal berhasil diperbarui.');
+    }
+
+    public function destroy(AiSchedule $schedule)
+    {
+        $name = $schedule->name;
+        $schedule->delete();
+
+        $this->activityLog->log('ai.schedule.deleted', null, "Menghapus jadwal autopilot '{$name}'.");
+
+        return Redirect::back()->with('success', 'Jadwal berhasil dihapus.');
+    }
+
+    public function runNow(Request $request, AiSchedule $schedule)
+    {
+        $this->autopilot->run($schedule, $request->user()->id);
+
+        return Redirect::back()->with(
+            $schedule->fresh()->status === AiScheduleStatus::Failed ? 'error' : 'success',
+            $schedule->fresh()->status === AiScheduleStatus::Failed
+                ? 'Eksekusi gagal: '.$schedule->fresh()->last_error
+                : 'Jadwal berhasil dieksekusi.',
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function normalize(array $data): array
+    {
+        $data['is_active'] = $data['is_active'] ?? false;
+        $data['auto_publish'] = $data['auto_publish'] ?? false;
+        $data['author_id'] = $data['author_id'] ?? null;
+
+        if (($data['type'] ?? 'daily') !== 'weekly') {
+            $data['day_of_week'] = null;
+        }
+
+        return $data;
+    }
+}

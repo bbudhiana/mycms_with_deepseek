@@ -20,13 +20,17 @@ class ContentRequest extends FormRequest
     public function rules(): array
     {
         $contentId = $this->route('content')?->getKey();
+        $creating = $this->route('content') === null;
+        // PATCH autosave mengirim sebagian field (hanya body). Wajibkan lengkap
+        // hanya saat membuat; update validasi field yang hadir.
+        $req = $creating ? 'required' : 'sometimes';
 
         return [
-            'title' => ['required', 'string', 'max:255'],
+            'title' => [$req, 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', Rule::unique('contents', 'slug')->ignore($contentId)],
             'sub_title' => ['nullable', 'string', 'max:255'],
             'excerpt' => ['nullable', 'string', 'max:65535'],
-            'body' => ['required', 'string'],
+            'body' => [$req, 'string'],
             'featured_video' => ['nullable', 'string', 'max:65535'],
             'breaking_news_flag' => ['sometimes', 'boolean'],
             'editor_pick_flag' => ['sometimes', 'boolean'],

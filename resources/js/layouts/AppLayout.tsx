@@ -16,6 +16,9 @@ import {
     LogOut,
     CircleUserRound,
     Newspaper,
+    Bot,
+    CalendarClock,
+    History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -36,13 +39,6 @@ interface NavGroup {
 export function AppLayout({ children }: { children: React.ReactNode }) {
     const page = usePage();
     const permissions = useMemo(() => new Set(page.props.auth?.user?.permissions ?? []), [page.props.auth?.user]);
-
-    useEffect(() => {
-        const flash = page.props.flash ?? {};
-        if (flash.success) toast.success(flash.success);
-        if (flash.error) toast.error(flash.error);
-        if (flash.info) toast.info(flash.info);
-    }, [page.props.flash]);
 
     const nav: NavGroup[] = useMemo(
         () => [
@@ -117,6 +113,33 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     },
                 ],
             },
+            ...(page.props.auth?.user?.roles?.includes('super_admin')
+                ? [
+                      {
+                          section: 'Integrasi AI',
+                          items: [
+                              {
+                                  label: 'Pengaturan AI',
+                                  href: '/ai/settings',
+                                  icon: Bot,
+                                  active: (p: string) => p.startsWith('/ai/settings'),
+                              },
+                              {
+                                  label: 'Jadwal Otomasi AI',
+                                  href: '/ai/schedules',
+                                  icon: CalendarClock,
+                                  active: (p: string) => p.startsWith('/ai/schedules'),
+                              },
+                              {
+                                  label: 'Riwayat Autopilot',
+                                  href: '/ai/history',
+                                  icon: History,
+                                  active: (p: string) => p.startsWith('/ai/history'),
+                              },
+                          ],
+                      },
+                  ]
+                : []),
         ],
         [permissions],
     );

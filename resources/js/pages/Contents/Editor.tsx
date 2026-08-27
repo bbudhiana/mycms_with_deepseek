@@ -73,6 +73,46 @@ interface CmsContent {
     has_pending_schedule?: boolean;
 }
 
+interface EditorFormData {
+    title: string;
+    sub_title: string;
+    slug: string;
+    excerpt: string;
+    body: string;
+    featured_video: string;
+    breaking_news_flag: boolean;
+    editor_pick_flag: boolean;
+    category_id: string;
+    featured_image_id: number | null;
+    thumbnail_id: number | null;
+    image_caption: string;
+    image_credit: string;
+    tags: number[];
+}
+
+/**
+ * Representasi form yang dibandingkan untuk deteksi "belum disimpan".
+ * Tag diurutkan agar urutan klik tidak dianggap perubahan.
+ */
+function toComparable(d: EditorFormData) {
+    return {
+        title: d.title,
+        sub_title: d.sub_title,
+        slug: d.slug,
+        excerpt: d.excerpt,
+        body: d.body,
+        featured_video: d.featured_video,
+        breaking_news_flag: d.breaking_news_flag,
+        editor_pick_flag: d.editor_pick_flag,
+        category_id: d.category_id,
+        featured_image_id: d.featured_image_id,
+        thumbnail_id: d.thumbnail_id,
+        image_caption: d.image_caption,
+        image_credit: d.image_credit,
+        tags: [...d.tags].sort((a, b) => a - b),
+    };
+}
+
 export default function ContentsEditor({
     content,
     cms,
@@ -95,31 +135,34 @@ export default function ContentsEditor({
     const [archiveOpen, setArchiveOpen] = useState(false);
 
     const initialSnapshot = useMemo(
-        () => ({
-            title: content?.title ?? '',
-            sub_title: content?.sub_title ?? '',
-            slug: content?.slug ?? '',
-            excerpt: content?.excerpt ?? '',
-            body: content?.body ?? '',
-            featured_video: content?.featured_video ?? '',
-            breaking_news_flag: content?.breaking_news_flag ?? false,
-            editor_pick_flag: content?.editor_pick_flag ?? false,
-            category_id: content?.category_id ? String(content.category_id) : '',
-            image_caption: content?.image_caption ?? '',
-            image_credit: content?.image_credit ?? '',
-            tags: content?.tags?.map((t) => t.id) ?? [],
-        }),
-        // Snapshot hanya dihitung sekali per konten.
-        [],
+        () =>
+            toComparable({
+                title: content?.title ?? '',
+                sub_title: content?.sub_title ?? '',
+                slug: content?.slug ?? '',
+                excerpt: content?.excerpt ?? '',
+                body: content?.body ?? '',
+                featured_video: content?.featured_video ?? '',
+                breaking_news_flag: content?.breaking_news_flag ?? false,
+                editor_pick_flag: content?.editor_pick_flag ?? false,
+                category_id: content?.category_id ? String(content.category_id) : '',
+                featured_image_id: content?.featured_image_id ?? null,
+                thumbnail_id: content?.thumbnail_id ?? null,
+                image_caption: content?.image_caption ?? '',
+                image_credit: content?.image_credit ?? '',
+                tags: content?.tags?.map((t) => t.id) ?? [],
+            }),
+        [content],
     );
+    const [snapshot, setSnapshot] = useState(initialSnapshot);
 
     const [slugTouched, setSlugTouched] = useState(() => !!content?.slug);
     const [lastSavedAt, setLastSavedAt] = useState<Date | null>(() =>
         content?.updated_at ? new Date(content.updated_at) : null,
     );
-    const snapshotRef = useRef(initialSnapshot);
+    const savingRef = useRef(false);
 
-    const form = useForm({
+    const form = useForm<EditorFormData>({
         title: content?.title ?? '',
         sub_title: content?.sub_title ?? '',
         slug: content?.slug ?? '',
@@ -136,12 +179,10 @@ export default function ContentsEditor({
         tags: content?.tags?.map((t) => t.id) ?? [],
     });
 
-    const isDirty = useMemo(() => {
-        const { featured_image_id, thumbnail_id, ...comparable } = form.data as Record<string, unknown>;
-        void featured_image_id;
-        void thumbnail_id;
-        return JSON.stringify(comparable) !== JSON.stringify(snapshotRef.current);
-    }, [form.data]);
+    const isDirty = useMemo(
+        () => JSON.stringify(toComparable(form.data)) !== JSON.stringify(snapshot),
+        [form.data, snapshot],
+    );
 
     const status = content?.status ?? 'draft';
     const editable = isCreate || status === 'draft';
@@ -185,14 +226,20 @@ export default function ContentsEditor({
             category_id: data.category_id ? Number(data.category_id) : null,
             tags: data.tags ?? [],
         }));
-        const onSuccess = () => {
-            snapshotRef.current = { ...form.data };
+        savingRef.current = true;
+        const finish = () => {
+            savingRef.current = false;
+            setSnapshot(toComparable(form.data));
             setLastSavedAt(new Date());
         };
+        const onSuccess = finish;
+        const onError = () => {
+            savingRef.current = false;
+        };
         if (isCreate) {
-            form.post('/contents', { onSuccess });
+            form.post('/contents', { onSuccess, onError });
         } else {
-            form.patch(`/contents/${content!.id}`, { onSuccess });
+            form.patch(`/contents/${content!.id}`, { onSuccess, onError });
         }
     };
 
@@ -204,19 +251,23 @@ export default function ContentsEditor({
         async (html: string) => {
             if (isCreate || !editable || !content) return;
 
+            savingRef.current = true;
+
             return new Promise<void>((resolve, reject) => {
                 router.patch(
-                    `/contents/${content.id}`,
+                    `/contents/${content.id}/autosave`,
                     { body: html },
                     {
                         preserveState: true,
                         preserveScroll: true,
                         onSuccess: () => {
-                            snapshotRef.current = { ...snapshotRef.current, body: html };
+                            savingRef.current = false;
+                            setSnapshot((prev) => ({ ...prev, body: html }));
                             setLastSavedAt(new Date());
                             resolve();
                         },
                         onError: () => {
+                            savingRef.current = false;
                             reject(new Error('Autosave failed'));
                         },
                     },
@@ -240,8 +291,14 @@ export default function ContentsEditor({
         window.addEventListener('beforeunload', onBeforeUnload);
 
         const removeListener = router.on('before', (event) => {
-            if (!isDirty) return;
+            if (!isDirty || savingRef.current) return;
             const visit = event.detail.visit;
+            const path = new URL(visit.url, window.location.origin).pathname;
+            // Jangan intercept request simpan/autosave itu sendiri.
+            const isSaveRequest =
+                (visit.method === 'post' && path === '/contents') ||
+                (visit.method === 'patch' && /^\/contents\/\d+$/.test(path));
+            if (isSaveRequest) return;
             event.preventDefault();
             pendingNavRef.current = () => {
                 pendingNavRef.current = null;

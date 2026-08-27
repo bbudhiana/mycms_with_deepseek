@@ -137,4 +137,34 @@ class ContentController extends Controller
             ->route('contents.index')
             ->with('success', 'Konten berhasil dihapus.');
     }
+
+    /**
+     * Autosave body konten tanpa flash toast. Endpoint terpisah dari update
+     * agar RichTextEditor boleh mengirim PATCH periodik tanpa membingungkan
+     * pengguna dengan notifikasi "Konten berhasil diperbarui" yang muncul
+     * padahal tidak ada klik simpan eksplisit.
+     */
+    public function autosave(Request $request, Content $content)
+    {
+        $this->authorize('edit', $content);
+
+        $body = (string) $request->input('body', '');
+        if (trim($body) === '') {
+            return response()->noContent();
+        }
+
+        $clean = clean($body, 'cms_content');
+
+        if (trim(strip_tags($clean)) === '') {
+            return response()->noContent();
+        }
+
+        if ($content->body === $clean) {
+            return response()->noContent();
+        }
+
+        $content->update(['body' => $clean]);
+
+        return response()->noContent();
+    }
 }

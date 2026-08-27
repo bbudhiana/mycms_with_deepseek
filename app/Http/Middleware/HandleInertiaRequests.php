@@ -32,11 +32,6 @@ class HandleInertiaRequests extends Middleware
                     'permissions' => $user->getAllPermissions()->pluck('name'),
                 ] : null,
             ],
-            'flash' => [
-                'success' => fn () => $request->session()->get('success'),
-                'error' => fn () => $request->session()->get('error'),
-                'info' => fn () => $request->session()->get('info'),
-            ],
             'cms' => $this->sharedCmsData($request),
         ];
     }
