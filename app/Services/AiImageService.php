@@ -8,6 +8,7 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Arr;
 use RuntimeException;
 
 class AiImageService
@@ -54,7 +55,7 @@ class AiImageService
                 ->timeout(30)
                 ->withHeaders(['Authorization' => $settings->image_api_key])
                 ->acceptJson()
-                ->get('https://api.pexels.com/v1/search', ['query' => $query, 'per_page' => 1, 'locale' => 'id-ID']);
+                ->get('https://api.pexels.com/v1/search', ['query' => $query, 'per_page' => 6, 'locale' => 'id-ID']);
         } catch (ConnectionException) {
             throw new RuntimeException('Tidak dapat terhubung ke Pexels API.');
         }
@@ -64,9 +65,11 @@ class AiImageService
             throw new RuntimeException('Pexels error ('.$response->status().'): '.$error);
         }
 
-        $url = $response->json('photos.0.src.large2x')
-            ?? $response->json('photos.0.src.original')
-            ?? $response->json('photos.0.src.medium');
+        $randomNumber = Arr::random([0, 1, 2, 3, 4, 5]);
+        
+        $url = $response->json('photos.'.$randomNumber.'.src.large2x')
+            ?? $response->json('photos.'.$randomNumber.'.src.original')
+            ?? $response->json('photos.'.$randomNumber.'.src.medium');
 
         return is_string($url) ? $url : null;
     }

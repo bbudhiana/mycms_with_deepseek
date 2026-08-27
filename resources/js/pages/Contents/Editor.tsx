@@ -16,7 +16,8 @@ import {
     MessageSquareText,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
-import { StatusBadge, formatDate } from '@/components/status-badge';
+import { StatusBadge, formatDate, formatBytes } from '@/components/status-badge';
+import { cn } from '@/lib/utils';
 import { WorkflowStepper } from '@/components/workflow-stepper';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { MediaPicker } from '@/components/media-picker';
@@ -778,40 +779,89 @@ function MediaField({
 }: {
     label: string;
     mediaId: number | null;
-    media?: { url: string; original_name?: string } | null;
+    media?: { url: string; original_name?: string; size?: number; mime_type?: string } | null;
     fallbackText: string;
     onPick: () => void;
     onClear: () => void;
     disabled?: boolean;
 }) {
+    const isSelected = mediaId !== null && media !== null && media !== undefined;
+    const isOrphan = mediaId !== null && !isSelected;
+    const fileName = media?.original_name ?? null;
+    const ext = fileName?.includes('.') ? fileName.split('.').pop()?.toUpperCase() : null;
+    const sizeLabel = typeof media?.size === 'number' && media.size > 0 ? formatBytes(media.size) : null;
+
     return (
         <div>
             <Label>{label}</Label>
-            <div className="flex items-center gap-3 rounded-md border border-input bg-card p-3">
-                {mediaId && media ? (
-                    <img src={media.url} alt="" className="h-16 w-16 rounded-md object-cover" />
-                ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-md bg-muted">
-                        <ImagePlus className="h-6 w-6 text-muted-foreground" />
-                    </div>
+            <div
+                className={cn(
+                    'flex items-stretch gap-3 rounded-md border bg-card p-3 transition-colors',
+                    isSelected ? 'border-primary/40 bg-primary/5' : 'border-input hover:border-primary/30',
                 )}
-                <div className="flex-1">
-                    <p className="text-xs text-muted-foreground">
-                        {mediaId ? (media?.original_name ?? 'Terpilih') : fallbackText}
-                    </p>
+            >
+                <div className="shrink-0">
+                    {isSelected ? (
+                        <img
+                            src={media!.url}
+                            alt=""
+                            className="h-16 w-16 rounded-md object-cover ring-1 ring-border"
+                        />
+                    ) : (
+                        <div
+                            className="flex h-16 w-16 items-center justify-center rounded-md border border-dashed border-input bg-muted/40"
+                            aria-hidden
+                        >
+                            <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                    )}
                 </div>
-                <div className="flex gap-1">
-                    <Button type="button" variant="outline" size="sm" onClick={onPick} disabled={disabled}>
-                        Pilih
+
+                <div className="min-w-0 flex-1 self-center">
+                    {isSelected ? (
+                        <div className="space-y-0.5">
+                            <p
+                                className="truncate text-sm font-medium text-foreground"
+                                title={fileName ?? undefined}
+                            >
+                                {fileName}
+                            </p>
+                            {(ext || sizeLabel) && (
+                                <p className="flex items-center gap-1.5 truncate text-[11px] text-muted-foreground">
+                                    {ext && <span className="font-medium uppercase tracking-wide">{ext}</span>}
+                                    {ext && sizeLabel && <span aria-hidden>·</span>}
+                                    {sizeLabel && <span>{sizeLabel}</span>}
+                                </p>
+                            )}
+                        </div>
+                    ) : isOrphan ? (
+                        <p className="truncate text-sm text-warning">Media tidak tersedia — pilih ulang</p>
+                    ) : (
+                        <p className="truncate text-sm text-muted-foreground">{fallbackText}</p>
+                    )}
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1 self-center">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={onPick}
+                        disabled={disabled}
+                        aria-label={isSelected ? `Ganti ${label.toLowerCase()}` : `Pilih ${label.toLowerCase()}`}
+                    >
+                        <UploadCloud className="h-3.5 w-3.5" />
+                        {isSelected ? 'Ganti' : 'Pilih'}
                     </Button>
-                    {mediaId ? (
+                    {isSelected ? (
                         <Button
                             type="button"
                             variant="ghost"
                             size="iconSm"
                             onClick={onClear}
                             disabled={disabled}
-                            aria-label="Hapus"
+                            aria-label={`Hapus ${label.toLowerCase()}`}
+                            title="Hapus"
                         >
                             <X className="h-4 w-4" />
                         </Button>
