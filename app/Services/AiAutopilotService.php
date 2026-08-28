@@ -176,7 +176,8 @@ class AiAutopilotService
 Kamu adalah penulis berita profesional. Tulis satu artikel lengkap dalam bahasa {$schedule->language}
 dengan gaya: {$schedule->tone->promptDescription()}
 
-Artikel harus merupakan konten orisinal berdasarkan petunjuk arah topik dari user. Body artikel memakai HTML
+Artikel harus merupakan konten orisinal berdasarkan petunjuk arah topik dari user. Artikel tidak boleh mengandung 
+informasi yang tidak benar atau menyesatkan. Artikel bukan merupakan fiksi, hindari halusinasi. Body artikel memakai HTML
 dengan tag h2, p, strong, em, ul, li. Panjang 500–1200 kata.
 
 Balas HANYA dengan JSON valid, tanpa teks lain, dengan skema:

@@ -148,7 +148,10 @@ export default function UsersIndex({ users, filters, stats, roles, can }: Props)
             title: 'Hapus pengguna',
             description: `Hapus akun "${user.name}" secara permanen? ${contentNote}`,
             confirmVariant: 'destructive',
-            onConfirm: () => router.delete(`/users/${user.id}`),
+            onConfirm: () =>
+                router.delete(`/users/${user.id}`, {
+                    onSuccess: () => router.reload({ only: ['users'] }),
+                }),
         });
     };
 

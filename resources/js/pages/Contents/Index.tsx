@@ -78,6 +78,23 @@ export default function ContentsIndex({ contents, filters, statuses, categories,
         router.visit(href);
     };
 
+    // Inertia v3 sets `preserveState: true` on `router.delete()` by default.
+    // Setelah delete di sini redirect ke URL yang sama (`/contents`), Inertia
+    // tidak selalu re-fetch prop `contents` — halaman kelihatan stale dengan
+    // item yang baru dihapus. Paksa partial reload prop `contents` setelah
+    // sukses, supaya paginator selalu ambil data segar.
+    const handleDelete = (item: ContentItem) => {
+        deleteConfirm.confirm({
+            title: 'Hapus konten',
+            description: `Hapus "${item.title}" secara permanen?`,
+            confirmVariant: 'destructive',
+            onConfirm: () =>
+                router.delete(`/contents/${item.id}`, {
+                    onSuccess: () => router.reload({ only: ['contents'] }),
+                }),
+        });
+    };
+
     const toggleSort = (key: string) => {
         const nextDir = sort === key && dir === 'asc' ? 'desc' : 'asc';
         router.get('/contents', { ...filters, sort: key, dir: nextDir }, { preserveState: true, replace: true });
@@ -238,14 +255,7 @@ export default function ContentsIndex({ contents, filters, statuses, categories,
                                 key={item.id}
                                 item={item}
                                 onOpen={() => navigate(`/contents/${item.id}`)}
-                                onDelete={() =>
-                                    deleteConfirm.confirm({
-                                        title: 'Hapus konten',
-                                        description: `Hapus "${item.title}" secara permanen?`,
-                                        confirmVariant: 'destructive',
-                                        onConfirm: () => router.delete(`/contents/${item.id}`),
-                                    })
-                                }
+                                onDelete={() => handleDelete(item)}
                                 canDelete={can.delete}
                             />
                         ))}
@@ -365,15 +375,7 @@ export default function ContentsIndex({ contents, filters, statuses, categories,
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 className="text-destructive hover:text-destructive"
-                                                                onClick={() =>
-                                                                    deleteConfirm.confirm({
-                                                                        title: 'Hapus konten',
-                                                                        description: `Hapus "${item.title}" secara permanen?`,
-                                                                        confirmVariant: 'destructive',
-                                                                        onConfirm: () =>
-                                                                            router.delete(`/contents/${item.id}`),
-                                                                    })
-                                                                }
+                                                                onClick={() => handleDelete(item)}
                                                             >
                                                                 Hapus
                                                             </Button>
