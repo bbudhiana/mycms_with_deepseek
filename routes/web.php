@@ -96,6 +96,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('/schedules/{schedule}', [AiScheduleController::class, 'update'])->name('schedules.update');
         Route::delete('/schedules/{schedule}', [AiScheduleController::class, 'destroy'])->name('schedules.destroy');
         Route::post('/schedules/{schedule}/run', [AiScheduleController::class, 'runNow'])->name('schedules.run');
+        Route::post('/schedules/{schedule}/duplicate', [AiScheduleController::class, 'duplicate'])->name('schedules.duplicate');
 
         Route::get('/history', [AiHistoryController::class, 'index'])->name('history');
     });

@@ -145,3 +145,56 @@ it('deletes a schedule', function () {
 
     expect(AiSchedule::count())->toBe(0);
 });
+
+it('duplicates a schedule with identical config and a fresh idle state', function () {
+    actingAsRole('super_admin');
+
+    $category = Category::factory()->create();
+    $tags = Tag::factory()->count(2)->create();
+    $original = AiSchedule::factory()->create([
+        'name' => 'Berita Pagi',
+        'is_active' => true,
+        'type' => AiScheduleType::Weekly,
+        'day_of_week' => 1,
+        'tone' => 'editorial',
+        'topic_direction' => 'Liputan pagi',
+        'category_id' => $category->id,
+        'tags' => $tags->pluck('id')->all(),
+        'language' => 'id',
+        'publish_time' => '07:30',
+        'content_count' => 3,
+        'auto_publish' => true,
+        'status' => AiScheduleStatus::Failed,
+        'last_error' => 'timeout',
+        'failed_at' => now(),
+    ]);
+
+    $this->post(route('ai.schedules.duplicate', $original))->assertRedirect();
+
+    $copy = AiSchedule::where('id', '!=', $original->id)->first();
+
+    expect(AiSchedule::count())->toBe(2)
+        ->and($copy->name)->toBe('Berita Pagi (Salinan)')
+        ->and($copy->is_active)->toBeFalse()
+        ->and($copy->type)->toBe(AiScheduleType::Weekly)
+        ->and($copy->day_of_week)->toBe(1)
+        ->and($copy->topic_direction)->toBe('Liputan pagi')
+        ->and($copy->category_id)->toBe($category->id)
+        ->and($copy->tags)->toBe($tags->pluck('id')->all())
+        ->and($copy->publish_time)->toBe('07:30')
+        ->and($copy->content_count)->toBe(3)
+        ->and($copy->auto_publish)->toBeTrue()
+        ->and($copy->status)->toBe(AiScheduleStatus::Idle)
+        ->and($copy->last_error)->toBeNull()
+        ->and($copy->failed_at)->toBeNull();
+});
+
+it('forbids duplicating schedules for non-super-admin', function () {
+    actingAsRole('editor');
+
+    $schedule = AiSchedule::factory()->create();
+
+    $this->post(route('ai.schedules.duplicate', $schedule))->assertForbidden();
+
+    expect(AiSchedule::count())->toBe(1);
+});

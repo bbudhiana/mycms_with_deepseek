@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
-import { CalendarClock, Play, Plus, Pencil, Trash2, FileText, Tag as TagIcon, X } from 'lucide-react';
+import { CalendarClock, Play, Plus, Pencil, Trash2, FileText, Tag as TagIcon, X, Copy } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -151,6 +151,10 @@ export default function AiSchedulesPage({
         router.post(`/ai/schedules/${s.id}/run`);
     };
 
+    const duplicateSchedule = (s: Schedule) => {
+        router.post(`/ai/schedules/${s.id}/duplicate`);
+    };
+
     return (
         <>
             <Head title="Jadwal Otomasi AI" />
@@ -233,6 +237,9 @@ export default function AiSchedulesPage({
                                         </Button>
                                         <Button size="sm" variant="ghost" onClick={() => openEdit(s)}>
                                             <Pencil className="h-4 w-4" /> Ubah
+                                        </Button>
+                                        <Button size="sm" variant="ghost" onClick={() => duplicateSchedule(s)}>
+                                            <Copy className="h-4 w-4" /> Duplikasi
                                         </Button>
                                         <Button size="sm" variant="ghost" className="text-destructive" onClick={() => confirmDelete(s)}>
                                             <Trash2 className="h-4 w-4" /> Hapus

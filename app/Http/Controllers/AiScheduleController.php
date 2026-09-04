@@ -78,6 +78,21 @@ class AiScheduleController extends Controller
         return Redirect::back()->with('success', 'Jadwal berhasil dihapus.');
     }
 
+    public function duplicate(AiSchedule $schedule)
+    {
+        $copy = $schedule->replicate([
+            'status', 'last_run_at', 'failed_at', 'last_error',
+        ]);
+        $copy->name = "{$schedule->name} (Salinan)";
+        $copy->is_active = false;
+        $copy->status = AiScheduleStatus::Idle;
+        $copy->save();
+
+        $this->activityLog->log('ai.schedule.duplicated', $copy, "Menduplikasi jadwal autopilot '{$schedule->name}'.");
+
+        return Redirect::back()->with('success', 'Jadwal berhasil diduplikasi.');
+    }
+
     public function runNow(Request $request, AiSchedule $schedule)
     {
         $this->autopilot->run($schedule, $request->user()->id);
