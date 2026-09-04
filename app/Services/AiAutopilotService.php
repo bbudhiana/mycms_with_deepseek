@@ -188,7 +188,7 @@ Balas HANYA dengan JSON valid, tanpa teks lain, dengan skema:
   "excerpt": "ringkasan 1-2 kalimat",
   "body": "HTML artikel",
   "breaking_news_flag": boolean true jika konten ini layak jadi berita breaking/terkini yang sedang viral, false jika tidak",
-  "editor_pick_flag": boolean true jika konten ini termasuk berita penting pilihan editor (jangan selalu jadi pilihan editor, harus berita SANGAT penting) dan pastikan berita tersebut memiliki nilai strategis atau ekonomis, false jika tidak
+  "editor_pick_flag": boolean true jika konten ini termasuk berita penting -JANGAN MUDAH MEMASUKKAN BERITA ITU PENTING, CENDERUNG DEFAULT nilai false -, false jika tidak
 }
 
 Aturan tambahan:
