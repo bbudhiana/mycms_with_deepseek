@@ -15,6 +15,24 @@ class AiAutopilot extends Command
 
     public function handle(AiAutopilotService $autopilot): int
     {
+        // Recovery: baris yang masih 'running' setelah ambang batas dianggap
+        // proses sebelumnya mati (timeout/OOM/SIGKILL). Reset ke 'failed'
+        // supaya cron berikutnya bisa mengambilnya lagi. Tanpa ini, satu
+        // proses mati mengunci jadwal selamanya (AiAutopilotService::run()
+        // juga return early kalau status running).
+        $stale = AiSchedule::query()
+            ->where('status', 'running')
+            ->where('last_run_at', '<', now()->subMinutes(10))
+            ->update([
+                'status' => 'failed',
+                'failed_at' => now(),
+                'last_error' => 'Eksekusi sebelumnya terputus dan tidak selesai (timeout/OOM).',
+            ]);
+
+        if ($stale > 0) {
+            $this->warn("Reset {$stale} jadwal yang macet 'running' menjadi 'failed'.");
+        }
+
         $now = now();
         $due = AiSchedule::query()
             ->where('is_active', true)

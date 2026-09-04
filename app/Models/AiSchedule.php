@@ -26,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @property bool $auto_publish
  * @property AiScheduleStatus $status
  * @property Carbon|null $last_run_at
+ * @property Carbon|null $failed_at
  * @property string|null $last_error
  * @property int|null $category_id
  * @property array<int>|null $tags
@@ -50,6 +51,7 @@ class AiSchedule extends Model
         'auto_publish',
         'status',
         'last_run_at',
+        'failed_at',
         'last_error',
     ];
 
@@ -62,6 +64,7 @@ class AiSchedule extends Model
             'tone' => AiTone::class,
             'status' => AiScheduleStatus::class,
             'last_run_at' => 'datetime',
+            'failed_at' => 'datetime',
             'tags' => 'array',
         ];
     }

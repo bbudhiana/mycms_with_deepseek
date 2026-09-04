@@ -29,6 +29,7 @@ interface Schedule {
     auto_publish: boolean;
     status: string;
     last_run_at: string | null;
+    failed_at: string | null;
     last_error: string | null;
     generated_contents_count: number;
     author: { id: number; name: string } | null;
@@ -205,6 +206,7 @@ export default function AiSchedulesPage({
                                             konten/siklus · {s.auto_publish ? 'auto-terbit' : 'draft'}
                                             {s.author ? ` · Pemilik: ${s.author.name}` : ''}
                                             {s.last_run_at ? ` · Terakhir: ${formatDate(s.last_run_at)}` : ''}
+                                            {s.status === 'failed' && s.failed_at ? ` · Gagal: ${formatDate(s.failed_at)}` : ''}
                                         </p>
                                         {(s.category || scheduleTags.length > 0) && (
                                             <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">

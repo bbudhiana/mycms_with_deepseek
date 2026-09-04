@@ -64,6 +64,7 @@ class AiAutopilotService
             $schedule->update([
                 'status' => AiScheduleStatus::Failed,
                 'last_run_at' => now(),
+                'failed_at' => now(),
                 'last_error' => $e->getMessage(),
             ]);
         }
