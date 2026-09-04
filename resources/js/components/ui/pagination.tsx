@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { router } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +13,8 @@ interface Paginator {
     current_page: number;
     last_page: number;
     links: PaginationLink[];
+    prev_page_url: string | null;
+    next_page_url: string | null;
     total: number;
     from: number | null;
     to: number | null;
@@ -19,12 +22,25 @@ interface Paginator {
 }
 
 export function Pagination({ data }: { data: Paginator }) {
-    if (!data || data.last_page <= 1) {
+    if (!data) {
         return null;
     }
 
-    const prev = data.links.find((l) => l.label.includes('Previous'));
-    const next = data.links.find((l) => l.label.includes('Next'));
+    if (data.last_page <= 1) {
+        return (
+            <p className="mt-6 text-sm text-muted-foreground">
+                Menampilkan {data.total} data.
+            </p>
+        );
+    }
+
+    const go = (url: string | null) => {
+        if (!url) return;
+        router.visit(url, { preserveScroll: true });
+    };
+
+    const prev = data.prev_page_url;
+    const next = data.next_page_url;
 
     return (
         <nav className="mt-6 flex items-center justify-between text-sm" aria-label="Pagination">
@@ -34,56 +50,56 @@ export function Pagination({ data }: { data: Paginator }) {
             </p>
 
             <div className="flex items-center gap-1">
-                <PageLink href={prev?.url} disabled={!prev?.url} label="Previous">
+                <button
+                    type="button"
+                    onClick={() => go(prev)}
+                    disabled={!prev}
+                    aria-label="Halaman sebelumnya"
+                    className={cn(
+                        'inline-flex h-10 min-w-10 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors duration-200',
+                        prev
+                            ? 'text-foreground hover:bg-muted cursor-pointer'
+                            : 'text-muted-foreground cursor-not-allowed pointer-events-none',
+                    )}
+                >
                     <ChevronLeft className="h-4 w-4" />
-                </PageLink>
+                </button>
 
                 {data.links
                     .filter((l) => !l.label.includes('Previous') && !l.label.includes('Next'))
                     .map((link, i) => (
-                        <PageLink key={i} href={link.url} active={link.active} label={link.label}>
+                        <button
+                            key={i}
+                            type="button"
+                            onClick={() => go(link.url)}
+                            aria-label={`Halaman ${link.label}`}
+                            aria-current={link.active ? 'page' : undefined}
+                            className={cn(
+                                'inline-flex h-10 min-w-10 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors duration-200',
+                                link.active
+                                    ? 'bg-foreground text-background cursor-default'
+                                    : 'text-foreground hover:bg-muted cursor-pointer',
+                            )}
+                        >
                             {link.label.replace(/[^\d]/g, '') || '…'}
-                        </PageLink>
+                        </button>
                     ))}
 
-                <PageLink href={next?.url} disabled={!next?.url} label="Next">
+                <button
+                    type="button"
+                    onClick={() => go(next)}
+                    disabled={!next}
+                    aria-label="Halaman selanjutnya"
+                    className={cn(
+                        'inline-flex h-10 min-w-10 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors duration-200',
+                        next
+                            ? 'text-foreground hover:bg-muted cursor-pointer'
+                            : 'text-muted-foreground cursor-not-allowed pointer-events-none',
+                    )}
+                >
                     <ChevronRight className="h-4 w-4" />
-                </PageLink>
+                </button>
             </div>
         </nav>
-    );
-}
-
-function PageLink({
-    href,
-    disabled,
-    active,
-    label,
-    children,
-}: {
-    href?: string | null;
-    disabled?: boolean;
-    active?: boolean;
-    label?: string;
-    children: React.ReactNode;
-}) {
-    const cls = cn(
-        'inline-flex h-10 min-w-10 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors duration-200',
-        active ? 'bg-foreground text-background' : 'text-foreground hover:bg-muted',
-        disabled && 'pointer-events-none opacity-40',
-    );
-
-    if (!href || disabled) {
-        return (
-            <span aria-label={label} className={cls}>
-                {children}
-            </span>
-        );
-    }
-
-    return (
-        <a href={href} aria-label={label} className={cls}>
-            {children}
-        </a>
     );
 }

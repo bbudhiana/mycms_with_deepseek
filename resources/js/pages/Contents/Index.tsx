@@ -36,6 +36,8 @@ interface PaginatorData {
     total: number;
     from: number | null;
     to: number | null;
+    prev_page_url: string | null;
+    next_page_url: string | null;
     links: { url: string | null; label: string; active: boolean }[];
 }
 
@@ -66,7 +68,13 @@ export default function ContentsIndex({ contents, filters, statuses, categories,
     }, [search]);
 
     useEffect(() => {
-        if (debouncedSearch === filters.search) return;
+        // `filters.search` dari server adalah `null` saat query tanpa `search=`,
+        // sedangkan `debouncedSearch` selalu string (state diinisialisasi
+        // dengan `?? ''`). Normalisasi kedua sisi sebelum dibandingkan — kalau
+        // tidak, '' !== null dan effect langsung navigasi ke `/contents` saat
+        // mount (mis. membuka `/contents?page=2` akan dilempar balik ke page 1).
+        const serverSearch = filters.search ?? '';
+        if (debouncedSearch === serverSearch) return;
         router.get(
             '/contents',
             { ...filters, search: debouncedSearch || undefined },

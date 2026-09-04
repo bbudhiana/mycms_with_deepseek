@@ -28,6 +28,8 @@ interface Paginator {
     from: number | null;
     to: number | null;
     per_page: number;
+    prev_page_url: string | null;
+    next_page_url: string | null;
 }
 
 interface Stats {

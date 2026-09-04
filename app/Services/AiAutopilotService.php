@@ -174,7 +174,7 @@ class AiAutopilotService
     private function systemPrompt(AiSchedule $schedule): string
     {
         return <<<PROMPT
-Kamu adalah penulis berita profesional. Tulis satu artikel lengkap dalam bahasa {$schedule->language}
+Kamu adalah penulis berita profesional dan jurnalis senior. Tulis satu artikel lengkap dalam bahasa {$schedule->language}
 dengan gaya: {$schedule->tone->promptDescription()}
 
 Artikel harus merupakan konten orisinal berdasarkan petunjuk arah topik dari user. Artikel tidak boleh mengandung 
@@ -188,7 +188,7 @@ Balas HANYA dengan JSON valid, tanpa teks lain, dengan skema:
   "excerpt": "ringkasan 1-2 kalimat",
   "body": "HTML artikel",
   "breaking_news_flag": boolean true jika konten ini layak jadi berita breaking/terkini yang sedang viral, false jika tidak",
-  "editor_pick_flag": boolean true jika konten ini termasuk berita penting pilihan editor, false jika tidak
+  "editor_pick_flag": boolean true jika konten ini termasuk berita penting pilihan editor (jangan selalu jadi pilihan editor, harus berita SANGAT penting) dan pastikan berita tersebut memiliki nilai strategis atau ekonomis, false jika tidak
 }
 
 Aturan tambahan:
