@@ -36,7 +36,9 @@ class AiImageService
         }
 
         if ($settings->image_provider === 'pexels') {
-            $url = $this->pexelsSearch($query);
+            //$url = $this->pexelsSearch($query);
+            $result = $this->pexelsCandidates($query);
+            $url = $result[0]['src']['large2x'] ?? $result[0]['src']['original'] ?? $result[0]['src']['medium'];
         } elseif ($settings->image_provider === 'unsplash') {
             $url = $this->unsplashSearch($query);
             if ($url !== null) {
@@ -77,13 +79,63 @@ class AiImageService
             throw new RuntimeException('Pexels error ('.$response->status().'): '.$error);
         }
 
-        $randomNumber = Arr::random([0, 1, 2, 3, 4, 5]);
-
-        $url = $response->json('photos.'.$randomNumber.'.src.large2x')
-            ?? $response->json('photos.'.$randomNumber.'.src.original')
-            ?? $response->json('photos.'.$randomNumber.'.src.medium');
+        $url = $response->json('photos.0.src.large2x')
+            ?? $response->json('photos.0.src.original')
+            ?? $response->json('photos.0.src.medium');
 
         return is_string($url) ? $url : null;
+    }
+
+    private function pexelsCandidates(
+        string $query,
+        int $perPage = 15,
+        string $locale = 'id-ID'
+    ): array {
+        $settings = app(AiProviderService::class)->settings();
+
+        if (! $settings || blank($settings->image_api_key)) {
+            throw new RuntimeException('API key Pexels belum dikonfigurasi.');
+        }
+
+        try {
+            /** @var Response $response */
+            $response = Http::connectTimeout(10)
+                ->timeout(30)
+                ->retry(2, 500)
+                ->withHeaders([
+                    'Authorization' => $settings->image_api_key,
+                ])
+                ->acceptJson()
+                ->get('https://api.pexels.com/v1/search', [
+                    'query'       => trim($query),
+                    'per_page'    => min(max($perPage, 1), 80),
+                    'orientation' => 'landscape',
+                    'locale'      => $locale,
+                ]);
+
+        } catch (ConnectionException) {
+            throw new RuntimeException('Tidak dapat terhubung ke Pexels API.');
+        }
+
+        if ($response->failed()) {
+            $error = $response->json('error') ?? $response->body();
+
+            throw new RuntimeException(
+                'Pexels error ('.$response->status().'): '.$error
+            );
+        }
+
+        return collect($response->json('photos', []))
+            ->filter(function ($photo) {
+                return isset(
+                    $photo['id'],
+                    $photo['width'],
+                    $photo['height'],
+                    $photo['src']
+                );
+            })
+            ->values()
+            ->all();
     }
 
     private function unsplashSearch(string $query): ?string

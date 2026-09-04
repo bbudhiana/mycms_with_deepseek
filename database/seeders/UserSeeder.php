@@ -12,8 +12,8 @@ class UserSeeder extends Seeder
         $users = [
             ['name' => 'Super Admin', 'email' => 'superadmin@mynews.test', 'role' => 'super_admin', 'password' => 'password'],
             ['name' => 'Admin', 'email' => 'admin@mynews.test', 'role' => 'admin', 'password' => 'password'],
-            ['name' => 'Editor', 'email' => 'editor@mynews.test', 'role' => 'editor', 'password' => 'password'],
-            ['name' => 'Author', 'email' => 'author@mynews.test', 'role' => 'author', 'password' => 'password'],
+            ['name' => 'Andi F Nora', 'email' => 'editor@mynews.test', 'role' => 'editor', 'password' => 'password'],
+            ['name' => 'Dian Castro', 'email' => 'author@mynews.test', 'role' => 'author', 'password' => 'password'],
             ['name' => 'Viewer', 'email' => 'viewer@mynews.test', 'role' => 'viewer', 'password' => 'password'],
         ];
 

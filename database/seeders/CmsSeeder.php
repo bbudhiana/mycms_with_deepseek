@@ -13,14 +13,13 @@ class CmsSeeder extends Seeder
 {
     public function run(): void
     {
-        $tech = Category::firstOrCreate(['name' => 'Teknologi'], ['slug' => 'teknologi', 'description' => 'Berita seputar teknologi.']);
-        $sport = Category::firstOrCreate(['name' => 'Olahraga'], ['slug' => 'olahraga', 'description' => 'Berita olahraga.']);
-        $news = Category::firstOrCreate(['name' => 'Nasional'], ['slug' => 'nasional', 'description' => 'Berita nasional.']);
+        $tech = Category::firstOrCreate(['name' => 'Teknologi'], ['slug' => 'teknologi', 'description' => 'Informasi tentang inovasi digital, AI, perangkat, aplikasi, dan perkembangan teknologi modern.']);
+        $bisnis = Category::firstOrCreate(['name' => 'Bisnis'], ['slug' => 'bisnis', 'description' => 'Wawasan tentang usaha, keuangan, strategi, ekonomi, dan peluang pengembangan profesional.']);
+        $kesehatan = Category::firstOrCreate(['name' => 'Kesehatan'], ['slug' => 'kesehatan', 'description' => 'Panduan mengenai gaya hidup sehat, kebugaran, nutrisi, dan keseimbangan fisik maupun mental.']);
+        $edu = Category::firstOrCreate(['name' => 'Edukasi'], ['slug' => 'edukasi', 'description' => 'Pengetahuan, tutorial, dan panduan praktis untuk meningkatkan wawasan serta keterampilan.']);
 
-        Category::firstOrCreate(['name' => 'Gadget'], ['slug' => 'gadget', 'description' => 'Review dan berita gadget.', 'parent_id' => $tech->id]);
-        Category::firstOrCreate(['name' => 'Sepak Bola'], ['slug' => 'sepak-bola', 'description' => 'Liga dalam dan luar negeri.', 'parent_id' => $sport->id]);
 
-        $tags = ['polhukam', 'ekonomi', 'edukasi', 'kesehatan', 'hiburan'];
+        $tags = ['teknologi', 'ekonomi', 'edukasi', 'kesehatan', 'bisnis', 'peluang', 'pendidikan', 'inovasi'];
         $tagModels = collect($tags)->mapWithKeys(
             fn (string $tag) => [$tag => Tag::firstOrCreate(['name' => ucfirst($tag)], ['slug' => $tag])]
         );
@@ -34,21 +33,21 @@ class CmsSeeder extends Seeder
                 'slug' => 'contoh-artikel-teknologi',
                 'category' => $tech,
                 'status' => ContentStatus::Published,
-                'tags' => ['ekonomi', 'edukasi'],
+                'tags' => ['teknologi', 'edukasi'],
             ],
             [
                 'title' => 'Draft Artikel untuk Author',
                 'slug' => 'draft-artikel-untuk-author',
-                'category' => $news,
+                'category' => $kesehatan,
                 'status' => ContentStatus::Draft,
-                'tags' => ['polhukam'],
+                'tags' => ['kesehatan'],
             ],
             [
                 'title' => 'Menunggu Review dari Editor',
                 'slug' => 'menunggu-review-editor',
-                'category' => $sport,
+                'category' => $bisnis,
                 'status' => ContentStatus::Review,
-                'tags' => ['hiburan'],
+                'tags' => ['bisnis'],
             ],
             [
                 'title' => 'Artikel Disetujui Siap Publikasi',
