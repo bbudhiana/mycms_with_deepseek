@@ -1,5 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
 import { KeyRound, ShieldCheck, Fingerprint, Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageHeader, SectionCard } from '@/components/page-header';
 import { SettingsNav } from '@/components/settings-nav';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,17 @@ export default function SettingsSecurity({ twoFactorEnabled, hasPasskeys }: Prop
 
     const submitPassword = (e: React.FormEvent) => {
         e.preventDefault();
-        passwordForm.post('/user/password', { preserveScroll: true });
+        passwordForm.put('/user/password', {
+            preserveScroll: true,
+            onSuccess: () => {
+                passwordForm.reset();
+                toast.success('Kata sandi berhasil diperbarui.');
+            },
+            onError: (errors) => {
+                const first = Object.values(errors)[0];
+                toast.error(first ?? 'Gagal memperbarui kata sandi.');
+            },
+        });
     };
 
     const handleTwoFactor = () => {
