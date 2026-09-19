@@ -11,6 +11,7 @@ use App\Models\Tag;
 use App\Models\User;
 use App\Observers\ContentObserver;
 use App\Observers\TagObserver;
+use App\Observers\UserObserver;
 use App\Policies\CategoryPolicy;
 use App\Policies\ContentPolicy;
 use App\Policies\MediaPolicy;
@@ -68,5 +69,6 @@ class AppServiceProvider extends ServiceProvider
     {
         Tag::observe(TagObserver::class);
         Content::observe(ContentObserver::class);
+        User::observe(UserObserver::class);
     }
 }

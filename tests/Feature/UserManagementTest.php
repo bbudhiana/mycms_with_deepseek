@@ -17,7 +17,17 @@ it('lets an admin create a user with a role', function () {
 
     $user = User::where('email', 'baru@example.com')->first();
     expect($user)->not->toBeNull();
+    expect($user->slug)->toBe('baru');
     expect($user->hasRole('author'))->toBeTrue();
+});
+
+it('generates a unique slug for duplicate names', function () {
+    actingAsRole('admin');
+
+    $this->post('/users', ['name' => 'Baru', 'email' => 'a@example.com', 'password' => 'password', 'password_confirmation' => 'password', 'roles' => ['author']])->assertRedirect();
+    $this->post('/users', ['name' => 'Baru', 'email' => 'b@example.com', 'password' => 'password', 'password_confirmation' => 'password', 'roles' => ['author']])->assertRedirect();
+
+    expect(User::pluck('slug'))->toContain('baru-2');
 });
 
 it('requires a unique email', function () {
